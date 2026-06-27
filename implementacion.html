@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXAMEN TRANSVERSAL // IMPLEMENTACION</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+
+        :root {
+            --sat-black: #02060a;
+            --panel-bg: rgba(12, 22, 38, 0.8);
+            --mw-white: #e2e8f0;
+            --mw-cyan: #00f0ff;
+            --mw-cyan-dim: rgba(0, 240, 255, 0.15);
+            --mw-gray: #829ab1;
+            --mw-red: #ff2a2a;
+            --mw-green: #39ff14;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair !important; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--sat-black); border-left: 1px solid var(--mw-cyan-dim); }
+        ::-webkit-scrollbar-thumb { background: var(--mw-cyan); }
+
+        body { position: relative;
+            background-color: var(--sat-black); color: var(--mw-gray); font-family: 'Share Tech Mono', monospace; overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .scanlines { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px); z-index: 9998; pointer-events: none; }
+        .vignette { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 50%, transparent 20%, rgba(0,0,0,0.95) 100%); z-index: 9997; pointer-events: none; }
+        .bg-watermark { position: fixed; top: 50%; left: 60%; transform: translate(-50%, -50%) rotate(0deg); width: 80vw; height: 80vw; border-radius: 50%; border: 1px dashed var(--mw-cyan-dim); z-index: 1; opacity: 0.15; pointer-events: none; animation: spinRotate 200s linear infinite; }
+        .bg-watermark::before { content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--mw-cyan); font-size: 5rem; }
+        @keyframes spinRotate { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: rgba(0, 0, 0, 0.8); border-bottom: 2px solid var(--mw-cyan); display: flex; align-items: center; padding: 0 50px; z-index: 1000; backdrop-filter: blur(15px); box-shadow: 0 5px 30px rgba(0, 240, 255, 0.1);
+        }
+        .header-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--mw-white); letter-spacing: 8px; text-shadow: 0 0 15px rgba(0,240,255,0.5); }
+        .header-status { margin-left: auto; color: var(--mw-cyan); font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: bold; letter-spacing: 4px; display: flex; align-items: center; gap: 15px; }
+        .status-dot { width: 12px; height: 12px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .container { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; padding-top: 70px; position: relative; z-index: 10; }
+
+        nav { background: rgba(2, 6, 12, 0.85); border-right: 1px solid var(--mw-cyan-dim); padding: 40px 0; height: calc(100vh - 70px); position: sticky; top: 70px; backdrop-filter: blur(10px); }
+        .nav-title { padding: 0 30px; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--mw-gray); letter-spacing: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        nav ul { list-style: none; }
+        nav a {
+            display: flex; align-items: center; padding: 18px 30px; border-left: 3px solid transparent; cursor: pointer; transition: all 0.3s; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; letter-spacing: 3px; color: var(--mw-gray); text-decoration: none; position: relative; overflow: hidden;
+        }
+        nav a::before { content: ''; position: absolute; left: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent); transition: left 0.5s; }
+        nav a:hover::before { left: 100%; }
+        nav a:hover { color: var(--mw-white); background: rgba(0, 240, 255, 0.05); }
+        nav .active { border-left-color: var(--mw-cyan); color: var(--mw-cyan); background: rgba(0, 240, 255, 0.1); text-shadow: 0 0 10px rgba(0,240,255,0.5); font-weight: bold; }
+        nav .active::after { content: '\25C4'; position: absolute; right: 20px; color: var(--mw-cyan); animation: slideLeft 1s infinite; }
+        @keyframes slideLeft { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+
+        main { padding: 50px 80px; max-width: 1400px; position: relative; }
+
+        .section {
+            background: var(--panel-bg); border: 1px solid var(--mw-cyan-dim); padding: 50px; margin-bottom: 50px; position: relative; backdrop-filter: blur(10px); opacity: 0; will-change: transform; transform: translateY(30px); animation: fadeInUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        .section::before, .section::after { content: ''; position: absolute; width: 30px; height: 30px; border: 2px solid var(--mw-cyan); transition: all 0.3s; }
+        .section::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .section::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .section:hover::before, .section:hover::after { width: 40px; height: 40px; }
+
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--mw-white); letter-spacing: 6px; margin-bottom: 25px; text-align: center; display: flex; align-items: center;
+            justify-content: center; gap: 20px; text-shadow: 0 0 20px rgba(0,240,255,0.4); }
+        .section-title::before { content: ''; width: 10px; height: 40px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); }
+
+        .text-block { font-size: 1.1rem; line-height: 1.8; margin-bottom: 25px; color: #94a3b8; }
+        .text-block strong { color: var(--mw-white); background: rgba(0,240,255,0.15); padding: 2px 6px; border-radius: 3px; border-bottom: 1px solid var(--mw-cyan); }
+
+        .node {
+            padding: 20px 40px; border: 2px solid var(--mw-cyan); color: var(--mw-white); font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 3px; background: rgba(0,0,0,0.9); text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.2); transition: all 0.3s; position: relative; cursor: crosshair;
+        }
+        .node:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); background: rgba(0, 240, 255, 0.1); }
+        .node-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--mw-cyan); display: block; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase; }
+        .arrow { width: 3px; height: 40px; background: var(--mw-cyan); position: relative; box-shadow: 0 0 10px var(--mw-cyan); margin: 10px 0; }
+        .arrow::after { content: '\25BC'; position: absolute; bottom: -14px; left: -7px; color: var(--mw-cyan); font-size: 1rem; text-shadow: 0 0 10px var(--mw-cyan); }
+
+        .footer { text-align: center; color: var(--mw-gray); font-size: 0.9rem; margin-top: 100px; padding-bottom: 50px; letter-spacing: 6px; opacity: 0.5; }
+
+        .hud-crosshair-x { position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-crosshair-y { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-target { position: absolute; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(0, 240, 255, 0.8); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: all 0.1s ease-out; box-shadow: inset 0 0 10px rgba(0,240,255,0.5); }
+        .hud-target::after { content:''; position:absolute; top:48%; left:48%; width:4px; height:4px; background:var(--mw-cyan); border-radius:50%; }
+
+        .scanner { position: fixed; top: -10%; left: 0; width: 100vw; height: 10vh; background: linear-gradient(to bottom, transparent, rgba(0,240,255,0.15), transparent); animation: scan 4s linear infinite; z-index: 9996; pointer-events: none; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+        #bootOverlay { position:fixed;top:0;left:0;width:100vw;height:100vh;background:#02060a;z-index:10000;display:flex;align-items:center;justify-content:center; flex-direction: column; gap: 20px; transition: opacity 0.5s ease; }
+        .glitch-text { font-family: 'Share Tech Mono', monospace; font-size: 2.5rem; color: var(--mw-cyan); letter-spacing: 15px; position: relative; animation: glitch 1s linear infinite; text-shadow: 0 0 20px var(--mw-cyan); text-align: center;}
+        @keyframes glitch { 2%, 64% { transform: translate(2px,0) skew(0deg); } 4%, 60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
+
+        .arch-diagram {
+            display: flex; flex-direction: column; gap: 20px; align-items: center; margin: 40px 0; padding: 40px; background: rgba(0, 240, 255, 0.02); border: 1px solid var(--mw-cyan-dim); position: relative;
+        }
+        .arch-diagram::before { content: 'PIPELINE SCHEMATIC'; position: absolute; top: 10px; left: 15px; font-family: 'Rajdhani'; color: var(--mw-gray); letter-spacing: 3px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class='hud-crosshair-x' id='hx'></div>
+    <div class='hud-crosshair-y' id='hy'></div>
+    <div class='hud-target' id='ht'></div>
+    <div class='scanner'></div>
+    <div id='bootOverlay'>
+        <div class='glitch-text'>ESTABLISHING SECURE CONNECTION...</div>
+    </div>
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="bg-watermark"></div>
+
+    <header>
+        <div class="header-title">EXAMEN TRANSVERSAL // IMPLEMENTACION</div>
+
+        <div class="header-status">
+            <div class="status-dot"></div>
+            LINK SECURE
+        </div>
+    </header>
+
+    <div class="container">
+        <nav>
+                        <div class="nav-title">DATABANKS</div>
+            <ul>
+                <a href="/arquitectura.html">1. ARQUITECTURA GENERAL</a>
+                <a href="/componentes.html">2. COMPONENTES</a>
+                <a href="/implementacion.html" class="active">3. IMPLEMENTACION</a>
+                <a href="/fundamentos.html">4. FUNDAMENTOS & DATOS</a>
+            </ul>
+        </nav>
+
+        <main>
+            <div class="section">
+                <div class="section-title">PIPELINE STREAMING — GCP DEPLOY</div>
+                <div class="text-block">
+                    <strong>Operacion:</strong> Pipeline Ventas Tiempo Real — DuocUC → GCP
+                    <br><br>
+                    <strong>Arquitectura:</strong> DuocUC (POST Webhook) → Cloud Run → Pub/Sub → Dataflow (Apache Beam) → Cloud Storage (CSV) → Alteryx/Cloud Dataprep → Looker Studio
+                    <br><br>
+                    El despliegue del pipeline involucra la configuracion secuencial de cada componente GCP, desde la ingesta de datos via microservicio REST hasta la visualizacion final en dashboard.
+                </div>
+
+                <div class="arch-diagram">
+                    <div class="node" style="font-size:1.4rem;">DUOC UC WEBHOOK</div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.4rem;">CLOUD RUN<span class="node-sub">ventas-api :8080</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.4rem;">PUB/SUB<span class="node-sub">TOPIC_VENTAS</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.4rem;">DATAFLOW<span class="node-sub">Apache Beam / 12s window</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.4rem;">CLOUD STORAGE<span class="node-sub">CSV / TTL 30d</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.4rem; border-color:var(--mw-green);">ALTERYX / DATAPREP<span class="node-sub">datos_limpios_nombrados</span></div>
+                    <div class="arrow" style="background:var(--mw-green); box-shadow:0 0 10px var(--mw-green);"></div>
+                    <div class="node" style="font-size:1.4rem; border-color:#facc15;">LOOKER STUDIO<span class="node-sub">Dashboard</span></div>
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.2s;">
+                <div class="section-title">PASO 0 — DETECTAR REGION</div>
+                <div class="text-block">
+                    Antes de iniciar el despliegue, es necesario identificar la region de GCP permitida por las politicas del proyecto. La politica de ubicacion de recursos (<code>gcp.resourceLocations</code>) define en que regiones se pueden crear los servicios. Dependiendo del proyecto, la region habilitada puede ser <strong>us-east1</strong>, <strong>us-east4</strong>, <strong>us-central1</strong> o <strong>europe-west1</strong>. Esta region debe configurarse de forma consistente en todos los servicios del pipeline para evitar errores de comunicacion entre componentes.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.3s;">
+                <div class="section-title">PASO 0.1 — VARIABLES DE ENTORNO</div>
+                <div class="text-block">
+                    Se definen variables de entorno que identifican los recursos del pipeline: el ID del proyecto GCP (<code>PROJECT_ID</code>), el nombre del topico Pub/Sub (<code>TOPIC_VENTAS</code>), el nombre del servicio Cloud Run (<code>ventas-api</code>), la imagen Docker (<code>ventas-api:v1</code>) y el bucket de Cloud Storage cuyo nombre incorpora el PROJECT_ID para garantizar unicidad global. Estas variables se utilizan en todos los pasos posteriores del despliegue.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.4s;">
+                <div class="section-title">PASO 0.2 — CONFIGURAR PUB/SUB</div>
+                <div class="text-block">
+                    Se crea un topico Pub/Sub llamado <code>TOPIC_VENTAS</code> que actua como bus de mensajeria asincrona entre el microservicio de ingesta y el pipeline de procesamiento. Adicionalmente se crea una suscripcion <code>ventas-sub</code> con tipo PULL y un ack-deadline de 60 segundos, que permite a Dataflow consumir los mensajes de forma controlada. Pub/Sub garantiza la entrega al menos una vez (at-least-once) y desacopla la produccion del consumo de eventos.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.5s;">
+                <div class="section-title">PASO 1 — MICROSERVICIO CLOUD RUN</div>
+                <div class="text-block">
+                    <strong>1.1 — Aplicacion Python/Flask:</strong> Se desarrolla un microservicio REST en Python utilizando Flask que expone un endpoint POST en el puerto 8080. El servicio recibe el payload JSON del webhook de Duoc UC, extrae los 10 campos del schema (id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg), los serializa a formato CSV y los publica al topico Pub/Sub. Incluye manejo de errores para excepciones <code>GoogleAPICallError</code> y <code>RetryError</code>, y soporta tanto objetos individuales como arreglos de ventas.
+                    <br><br>
+                    <strong>1.2 — Dockerfile:</strong> Se crea una imagen Docker basada en <code>python:3.11-slim</code> que copia la aplicacion, instala las dependencias (Flask, google-cloud-pubsub) y expone el puerto 8080.
+                    <br><br>
+                    <strong>1.3 — Build, Push y Deploy:</strong> La imagen se construye localmente con Docker, se etiqueta para Container Registry de GCP (<code>gcr.io/{PROJECT_ID}/ventas-api:v1</code>) y se sube al registro. Luego se despliega en Cloud Run como servicio serverless con 512MB de memoria, timeout de 300 segundos y las variables de entorno PROJECT_ID y TOPIC_ID configuradas. El servicio se despliega con autenticacion deshabilitada para recibir webhooks externos.
+                    <br><br>
+                    La URL generada por Cloud Run (ej: <code>https://ventas-api-{PROJECT_ID}.{REGION}.run.app</code>) se registra en la plataforma Duoc UC para que los webhooks de la subasta sean dirigidos al pipeline.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.6s;">
+                <div class="section-title">PASO 2 — CLOUD STORAGE</div>
+                <div class="text-block">
+                    Se crea un bucket de Cloud Storage con nombre unico global (<code>ventas-{PROJECT_ID}-df</code>) en la misma region configurada. Este bucket funciona como Data Lake del pipeline, almacenando los archivos CSV generados por Dataflow. El bucket se estructura en tres carpetas: <code>temp/</code> para archivos temporales del procesamiento, <code>staging/</code> para datos en estado intermedio y <code>samples/output/</code> para los CSV finales listos para consumo por las herramientas de visualizacion. Se aplica una politica de retencion TTL de 30 dias para control de costos.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.7s;">
+                <div class="section-title">PASOS 3-4 — ROLES Y PRIVILEGIOS IAM</div>
+                <div class="text-block">
+                    Para que los servicios de GCP puedan comunicarse entre si, se configuran los permisos IAM necesarios. Se habilitan las APIs requeridas: Dataflow, Compute Engine, Pub/Sub, Cloud Storage, IAM, Cloud Resource Manager y Cloud Run.
+                    <br><br>
+                    La cuenta de servicio por defecto de Compute Engine (<code>{PROJECT_NUMBER}-compute@developer.gserviceaccount.com</code>) recibe los roles necesarios para operar el pipeline:
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>roles/dataflow.worker</strong> — Permite ejecutar workers de Dataflow</li>
+                        <li><strong>roles/storage.objectAdmin</strong> — Permite leer y escribir objetos en Cloud Storage</li>
+                        <li><strong>roles/pubsub.editor</strong> — Permite publicar y consumir mensajes de Pub/Sub</li>
+                    </ul>
+                    <br>
+                    Adicionalmente, el agente de servicio de Dataflow (<code>service-{PROJECT_NUMBER}@dataflow-service-producerprod.iam.gserviceaccount.com</code>) requiere el rol <code>roles/dataflow.serviceAgent</code> y permisos de usuario sobre la cuenta de servicio worker para ejecutar el pipeline.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.8s;">
+                <div class="section-title">PASOS 5-6 — DATAFLOW PIPELINE</div>
+                <div class="text-block">
+                    El pipeline de procesamiento en streaming se construye con <strong>Apache Beam SDK 2.49.0</strong> en Java, utilizando el codigo de referencia de Google Cloud Platform. El pipeline se configura con los siguientes parametros:
+                    <br><br>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Entrada:</strong> Suscripcion Pub/Sub <code>ventas-sub</code></li>
+                        <li><strong>Salida:</strong> Bucket Cloud Storage en <code>gs://{BUCKET_NAME}/samples/output</code></li>
+                        <li><strong>Ventana:</strong> Fija de 12 segundos para agrupar mensajes</li>
+                        <li><strong>Runner:</strong> DataflowRunner en modo streaming</li>
+                        <li><strong>Autoescalado:</strong> Deshabilitado, con 1 worker fijo (n1-standard-1)</li>
+                        <li><strong>Ubicacion temporal:</strong> <code>gs://{BUCKET_NAME}/temp</code></li>
+                    </ul>
+                    <br>
+                    El pipeline lee mensajes desde Pub/Sub via <code>PubsubIO</code>, los agrupa en ventanas de 12 segundos y escribe archivos CSV particionados en Cloud Storage. El proceso de compilacion y ejecucion se realiza con Maven, y el job puede monitorearse en tiempo real desde la consola de Dataflow, que muestra metricas de throughput, watermark y utilizacion de workers.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:0.9s;">
+                <div class="section-title">PASOS 7-8 — VERIFICACION Y RESULTADOS</div>
+                <div class="text-block">
+                    Una vez desplegado el pipeline completo, se verifican los siguientes puntos:
+                    <br><br>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Cloud Run:</strong> El microservicio responde a peticiones HTTP GET/POST en la URL asignada. Se puede verificar con una peticion curl o directamente desde el navegador.</li>
+                        <li><strong>Pub/Sub:</strong> Los mensajes publicados por Cloud Run aparecen en la suscripcion <code>ventas-sub</code>. Se pueden inspeccionar desde la consola de GCP o mediante comandos de verificacion.</li>
+                        <li><strong>Dataflow:</strong> El pipeline debe mostrar estado RUNNING en la consola de Dataflow, con datos de throughput y ventanas de 12 segundos.</li>
+                        <li><strong>Cloud Storage:</strong> Despues de ~20 minutos de ejecucion, aparecen archivos CSV en <code>gs://{BUCKET_NAME}/samples/output/</code> con el formato: <code>id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg</code></li>
+                    </ul>
+                    <br>
+                    <strong>Formato CSV generado:</strong><br>
+                    <code>id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg</code>
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay:1.0s;">
+                <div class="section-title">MANEJO DE ERRORES</div>
+                <div class="text-block">
+                    Durante el despliegue pueden presentarse los siguientes escenarios:
+                    <br><br>
+                    <strong>Error de region en Dataflow:</strong> Si la region configurada no esta dentro de las permitidas por la politica del proyecto, el pipeline falla. Se debe verificar la politica de ubicacion de recursos y reconfigurar la region en todos los servicios.
+                    <br><br>
+                    <strong>Bucket duplicado:</strong> Si el bucket <code>ventas-{PROJECT_ID}-df</code> ya existe (por ejemplo, de un intento anterior), se puede crear uno nuevo con un sufijo alternativo como <code>-df2</code>.
+                    <br><br>
+                    <strong>Cloud Scheduler:</strong> Para pruebas automatizadas, se puede configurar un job de Cloud Scheduler que publique mensajes de prueba en el topico Pub/Sub cada minuto. Esto permite verificar el funcionamiento del pipeline sin depender del webhook externo de Duoc UC.
+                    <br><br>
+                    <strong>Errores comunes adicionales:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>403 Forbidden:</strong> Verificar permisos IAM. La cuenta de servicio de Dataflow necesita roles <code>dataflow.worker</code>, <code>pubsub.subscriber</code> y <code>storage.objectAdmin</code>.</li>
+                        <li><strong>Pub/Sub push timeout:</strong> El webhook en Cloud Run debe responder en menos de 60 segundos. Verificar que el handler no haga procesamiento sincrono pesado.</li>
+                        <li><strong>Dataflow no escribe outputs:</strong> Verificar que el schema del mensaje Pub/Sub coincida con lo esperado por el pipeline Beam.</li>
+                        <li><strong>Looker Studio sin datos:</strong> Verificar que el archivo CSV en Cloud Storage tenga los nombres de columna correctos y que la conexion este activa.</li>
+                    </ul>
+                    <br>
+                    <strong>Stack de monitoreo:</strong> Cloud Logging para logs centralizados, Cloud Monitoring para alertas de latencia y errores, dashboards de Dataflow para throughput y backlog de Pub/Sub.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 1.2s;">
+                <div class="section-title">GCP CONSOLE WORKFLOW</div>
+                <div class="text-block">
+                    Los mismos pasos del despliegue pueden realizarse desde la interfaz grafica de Google Cloud Console, complementando el enfoque de automatizacion:
+                    <br><br>
+                    <strong>1. Cloud Run (UI):</strong> Consola → Cloud Run → Crear servicio. Seleccionar la imagen del contenedor desde Artifact Registry, configurar puerto 8080, asignar variable de entorno <code>TOPIC_ID</code> y habilitar autenticacion. La URL del endpoint se genera automaticamente.
+                    <br><br>
+                    <strong>2. Pub/Sub (UI):</strong> Consola → Pub/Sub → Crear topico (<code>TOPIC_VENTAS</code>). Crear suscripcion (<code>ventas-sub</code>) con tipo PULL, ack-deadline de 60s y retencion de 7 dias. Desde la UI se puede publicar mensajes de prueba y visualizar el backlog.
+                    <br><br>
+                    <strong>3. Dataflow (UI):</strong> Consola → Dataflow → Crear trabajo desde plantilla o codigo propio. Seleccionar pipeline Beam, especificar suscripcion Pub/Sub de entrada y bucket de salida. La UI muestra graficos de throughput, watermark y utilizacion de workers en tiempo real.
+                    <br><br>
+                    <strong>4. Cloud Storage (UI):</strong> Consola → Cloud Storage → Navegador de buckets. Visualizar archivos CSV generados por Dataflow, configurar TTL de 30 dias y administrar permisos de acceso. La UI permite previsualizar archivos sin descargarlos.
+                    <br><br>
+                    <strong>5. IAM (UI):</strong> Consola → IAM y administracion → Asignar roles a cuentas de servicio. La cuenta de servicio de Dataflow requiere: <code>dataflow.worker</code>, <code>pubsub.subscriber</code> y <code>storage.objectAdmin</code>.
+                </div>
+            </div>
+
+            <div class="footer">
+                END OF DEPLOY PROTOCOL // TASK FORCE 141
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playClickSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        document.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => playClickSound());
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            document.getElementById('hx').style.top = e.pageY + 'px';
+            document.getElementById('hy').style.left = e.pageX + 'px';
+            document.getElementById('ht').style.top = e.pageY + 'px';
+            document.getElementById('ht').style.left = e.pageX + 'px';
+        });
+
+        
+        document.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            const wh = window.innerHeight;
+            sections.forEach(s => {
+                const rect = s.getBoundingClientRect();
+                const center = rect.top + rect.height / 2;
+                const offset = (center - wh / 2) / wh;
+                s.style.transform = `translateY(${offset * -6}px)`;
+            });
+        });
+
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('bootOverlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('bootOverlay').style.display = 'none', 500);
+            }, 800);
+        };
+    </script>
+</body>
+</html>

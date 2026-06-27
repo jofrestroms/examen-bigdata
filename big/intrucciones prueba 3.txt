@@ -1,0 +1,465 @@
+************************************************
+* Pipeline Ventas Tiempo Real - DuocUC -> GCP
+* Version: 2026
+* Basado en GSP903
+* Arquitectura: DuocUC (POST) -> Cloud Run -> Pub/Sub -> Dataflow -> Cloud Storage (CSV)
+* PROJECT_ID : se toma automaticamente con gcloud
+* REGION : se detecta segun politica del proyecto
+* BUCKET : usa PROJECT_ID para garantizar nombre unico global
+************************************************
+
+************************************************
+* Paso 0. Detectar region permitida del proyecto
+************************************************
+
+-- Ejecutar este comando y buscar "in:us-eastX-locations" en el resultado:
+
+gcloud org-policies describe constraints/gcp.resourceLocations \
+--project=$(gcloud config get-value project)
+
+-- Segun lo que aparezca, exportar la region:
+-- in:us-east1-locations --> export REGION="us-east1"
+-- in:us-east4-locations --> export REGION="us-east4"
+-- in:us-central1-locations --> export REGION="us-central1"
+
+export REGION="europe-west1"
+echo "REGION=$REGION"
+
+************************************************
+* Paso 0.1. Crear variables de entorno
+************************************************
+
+export PROJECT_ID=$(gcloud config get-value project)
+export TOPIC_ID="TOPIC_VENTAS"
+export SERVICE_NAME="ventas-api"
+export IMAGE_NAME="ventas-api"
+export IMAGE_TAG="v1"
+export BUCKET_NAME="ventas-${PROJECT_ID}-df"
+echo "PROJECT_ID=$PROJECT_ID"
+echo "TOPIC_ID=$TOPIC_ID"
+echo "SERVICE_NAME=$SERVICE_NAME"
+echo "IMAGE_NAME=$IMAGE_NAME"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "REGION=$REGION"
+
+************************************************
+* Paso 0.2. Configuracion PUB/SUB
+************************************************
+
+gcloud pubsub topics create $TOPIC_ID
+gcloud pubsub subscriptions create ventas-sub \
+--topic=$TOPIC_ID \
+--ack-deadline=60
+
+-- Verificar: GCP Console --> Pub/Sub --> Topics --> TOPIC_VENTAS
+
+************************************************
+* Paso 1. Configuracion Cloud Run
+************************************************
+
+mkdir -p ~/ventas-api
+cd ~/ventas-api
+
+******************************************************************
+* 1.1-. Crear archivo main.py
+******************************************************************
+
+nano main.py
+
+-- Pegar el siguiente contenido en nano:
+
+import os
+import logging
+from flask import Flask, request
+from google.cloud import pubsub_v1
+from google.api_core.exceptions import GoogleAPICallError, RetryError
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+app = Flask(__name__)
+
+PROJECT_ID = os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+TOPIC_ID = os.environ.get("TOPIC_ID")
+
+if not PROJECT_ID:
+    raise RuntimeError("Falta definir PROJECT_ID")
+if not TOPIC_ID:
+    raise RuntimeError("Falta definir TOPIC_ID")
+
+publisher = pubsub_v1.PublisherClient()
+topic_path = publisher.topic_path(PROJECT_ID, TOPIC_ID)
+
+def to_csv_row(data):
+    return ",".join([
+        str(data.get("id_cliente", "")),
+        str(data.get("cliente", "")),
+        str(data.get("genero", "")),
+        str(data.get("id_producto", "")),
+        str(data.get("producto", "")),
+        str(data.get("precio", "")),
+        str(data.get("cantidad", "")),
+        str(data.get("monto", "")),
+        str(data.get("forma_pago", "")),
+        str(data.get("fecreg", ""))
+    ])
+
+def publish_to_pubsub(csv_row):
+    try:
+        message = csv_row.encode("utf-8")
+        future = publisher.publish(topic_path, message)
+        future.result()
+        logger.info("Fila CSV publicada: " + csv_row)
+    except (GoogleAPICallError, RetryError) as e:
+        logger.error("Error Pub/Sub: " + str(e))
+        raise
+
+@app.route("/", methods=["POST", "GET"])
+def main():
+    try:
+        if request.method == "POST":
+            venta = request.get_json(force=True)
+            if not venta:
+                return "Error: body JSON vacio", 400
+            if isinstance(venta, list):
+                for item in venta:
+                    publish_to_pubsub(to_csv_row(item))
+                return "Ventas publicadas: " + str(len(venta)), 200
+            publish_to_pubsub(to_csv_row(venta))
+            return "Venta publicada: " + str(venta.get("cliente")), 200
+        return "Servicio activo", 200
+    except Exception as e:
+        logger.error("Error: " + str(e))
+        return "Error: " + str(e), 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+
+---------------------------------------------------------------------------------
+Guardar y cerrar: Ctrl+O --> Enter --> Ctrl+X
+Verificar: cat main.py
+---------------------------------------------------------------------------------
+******************************************************************
+* 1.2-. Crear archivo Dockerfile
+******************************************************************
+
+nano Dockerfile
+
+-- Pegar el siguiente contenido en nano:
+
+FROM python:3.11-slim
+WORKDIR /app
+COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8080
+CMD ["python", "main.py"]
+
+---------------------------------------------------------------------------------
+Guardar y cerrar: Ctrl+O --> Enter --> Ctrl+X
+Verificar: cat Dockerfile
+---------------------------------------------------------------------------------
+
+******************************************************************
+* 1.3-. Crear archivo requirements.txt
+******************************************************************
+
+nano requirements.txt
+
+-- Pegar el siguiente contenido en nano:
+
+Flask==2.3.3
+requests==2.31.0
+google-cloud-pubsub==2.18.4
+Werkzeug==2.3.7
+---------------------------------------------------------------------------------
+Guardar y cerrar: Ctrl+O --> Enter --> Ctrl+X
+Verificar: cat requirements.txt
+---------------------------------------------------------------------------------
+
+******************************************************************
+* 1.4-. Construir imagen Docker
+******************************************************************
+
+docker build -t $IMAGE_NAME .
+
+******************************************************************
+* 1.5-. Ejecutar la imagen localmente (opcional, para probar)
+******************************************************************
+
+docker run \
+-p 8080:8080 \
+-e PROJECT_ID="$PROJECT_ID" \
+-e GOOGLE_CLOUD_PROJECT="$PROJECT_ID" \
+-e TOPIC_ID="$TOPIC_ID" \
+"$IMAGE_NAME"
+
+--> Verificar con web preview
+--> Pub/Sub --> Subscriptions --> ventas-sub --> Messages --> Pull --> Purge
+
+Press CTRL+C to quit
+******************************************************************
+* 1.6-. Etiquetar imagen
+******************************************************************
+
+docker tag $IMAGE_NAME gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+
+******************************************************************
+* 1.7-. Subir a Container Registry
+******************************************************************
+
+docker push gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+
+******************************************************************
+* 1.8-. Desplegar en Cloud Run
+******************************************************************
+
+gcloud run deploy $SERVICE_NAME \
+--image gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG \
+--platform managed \
+--region=$REGION \
+--allow-unauthenticated \
+--set-env-vars PROJECT_ID=$PROJECT_ID,TOPIC_ID=$TOPIC_ID \
+--memory=512Mi \
+--timeout=300
+
+--> Guardar la URL que aparece al final:
+--> https://ventas-api-635344047107.us-east4.run.app
+
+*************************************************************************************************************
+********************************
+*1.9-. Create a Cloud Schedule
+*Create a Cloud Scheduler job in this project. The job publishes a message to a Pub/Sub topic
+at one-minute intervals:
+* modificar URL
+*************************************************************************************************************
+**********************************
+name: publisher-job
+Frequency: * * * * *
+TimeZone united state/Chicago
+Target Type HTTP
+URL --> https://ventas-api-635344047107.us-east4.run.app
+Method GET
+Forze run
+
+******************************************************************
+* 1.9-. Registrar URL en plataforma DuocUC
+******************************************************************
+
+--> Ir a: https://bdrealtimeescuelait.duoc.cl
+--> Ingresar con email DuocUC (contrasena llega al correo)
+--> En "Registro de URL" pegar la URL del Cloud Run
+--> Clic REGISTRAR
+--> Verificar en Log que aparezca "Enviado correctamente"
+--> Verificar datos en Pub/Sub:
+
+gcloud pubsub subscriptions pull ventas-sub \
+--limit=5 \
+--auto-ack \
+--project=$PROJECT_ID
+
+************************************************
+* Paso 2. Creacion Cloud Storage
+************************************************
+
+-- El nombre lleva el PROJECT_ID para garantizar nombre unico global:
+
+export BUCKET_NAME="ventas-${PROJECT_ID}-df"
+echo "BUCKET_NAME=$BUCKET_NAME"
+
+gcloud storage buckets create gs://$BUCKET_NAME \
+--project=$PROJECT_ID \
+--location=$REGION
+
+-- Verificar ubicacion:
+
+gcloud storage buckets describe gs://$BUCKET_NAME | grep location
+
+-- Debe mostrar la misma REGION que exportaste
+
+************************************************
+* Paso 3. Variables de entorno
+************************************************
+
+export PROJECT_ID=$(gcloud config get-value project)
+export TOPIC_ID="TOPIC_VENTAS"
+export BUCKET_NAME="ventas-${PROJECT_ID}-df"
+echo "PROJECT_ID=$PROJECT_ID"
+echo "TOPIC_ID=$TOPIC_ID"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "REGION=$REGION"
+
+************************************************
+* Paso 4. Roles y privilegios
+************************************************
+
+export PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" \--format="value(projectNumber)")
+export WORKER_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+export DATAFLOW_SERVICE_AGENT="service-${PROJECT_NUMBER}@dataflow-service-producerprod.iam.gserviceaccount.com"
+echo "PROJECT_NUMBER=$PROJECT_NUMBER"
+echo "WORKER_SA=$WORKER_SA"
+echo "DATAFLOW_SERVICE_AGENT=$DATAFLOW_SERVICE_AGENT"
+
+-- Habilitar APIs:
+
+gcloud services enable \
+dataflow.googleapis.com \
+compute.googleapis.com \
+pubsub.googleapis.com \
+storage.googleapis.com \
+iam.googleapis.com \
+cloudresourcemanager.googleapis.com \
+run.googleapis.com \
+--project="$PROJECT_ID"
+
+-- Dar permisos al worker:
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+--member="serviceAccount:$WORKER_SA" \
+--role="roles/dataflow.worker"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+--member="serviceAccount:$WORKER_SA" \
+--role="roles/storage.objectAdmin"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+--member="serviceAccount:$WORKER_SA" \
+--role="roles/pubsub.editor"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+--member="serviceAccount:$DATAFLOW_SERVICE_AGENT" \
+--role="roles/dataflow.serviceAgent"
+
+gcloud iam service-accounts add-iam-policy-binding "$WORKER_SA" \
+--project="$PROJECT_ID" \
+--member="serviceAccount:$DATAFLOW_SERVICE_AGENT" \
+--role="roles/iam.serviceAccountUser"
+
+gcloud iam service-accounts add-iam-policy-binding "$WORKER_SA" \
+--project="$PROJECT_ID" \
+--member="serviceAccount:$DATAFLOW_SERVICE_AGENT" \
+--role="roles/iam.serviceAccountTokenCreator"
+
+-- NOTA: Los siguientes 3 comandos pueden dar error
+-- "service account does not exist". Es normal, ignorar y continuar.
+-- El DATAFLOW_SERVICE_AGENT se crea automaticamente al lanzar el primer job.
+************************************************
+* Paso 5. Descargar codigo oficial de Google
+************************************************
+cd ~
+git clone https://github.com/GoogleCloudPlatform/java-docs-samples.git
+cd java-docs-samples/pubsub/streaming-analytics
+************************************************
+* Paso 6. Configurar region y lanzar Dataflow
+************************************************
+-- Configurar region:
+
+gcloud config set compute/region $REGION
+gcloud config set dataflow/region $REGION
+
+-- Deshabilitar y rehabilitar Dataflow API (como indica GSP903):
+
+gcloud services disable dataflow.googleapis.com --project=$PROJECT_ID
+gcloud services enable dataflow.googleapis.com --project=$PROJECT_ID
+
+-- Volver a exportar variables (por si se perdieron en la sesion):
+
+export PROJECT_ID=$(gcloud config get-value project)
+export TOPIC_ID="TOPIC_VENTAS"
+export BUCKET_NAME="ventas-${PROJECT_ID}-df"
+echo "PROJECT_ID=$PROJECT_ID"
+echo "TOPIC_ID=$TOPIC_ID"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "REGION=$REGION"
+
+-- Lanzar el pipeline con ventana de 20 minutos:
+
+mvn compile exec:java \
+-Dexec.mainClass=com.examples.pubsub.streaming.PubSubToGcs \
+-Dexec.cleanupDaemonThreads=false \
+-Dexec.args=" \
+--project=${PROJECT_ID} \
+--region=${REGION} \
+--inputTopic=projects/${PROJECT_ID}/topics/${TOPIC_ID} \
+--output=gs://${BUCKET_NAME}/samples/output \
+--runner=DataflowRunner \
+--windowSize=12 \
+--tempLocation=gs://${BUCKET_NAME}/temp \
+--numWorkers=1 \
+--maxNumWorkers=1 \
+--autoscalingAlgorithm=NONE \
+--workerMachineType=n1-standard-1"
+
+--> Esperar BUILD SUCCESS
+--> Ir a GCP Console --> Dataflow --> Jobs --> ver job corriendo
+
+
+************************************************
+* Paso 7. Observar el resultado
+************************************************
+--> GCP Console --> Dataflow --> Jobs --> ver job corriendo
+--> Esperar ~20 minutos para el primer archivo
+
+
+************************************************
+* Paso 8. Revisar Cloud Storage
+************************************************
+
+--> GCP Console --> Cloud Storage --> ventas-${PROJECT_ID}-df --> samples/output
+--> Los archivos tendran formato CSV:
+--> id_cliente,cliente,genero,id_producto,producto,precio,cantidad,monto,forma_pago,fecreg
+-- Verificar desde Cloud Shell:
+gcloud storage ls gs://$BUCKET_NAME/samples/output/
+
+
+************************************************
+* En caso de error de region en Dataflow
+************************************************
+
+-- Verificar region permitida:
+
+gcloud org-policies describe constraints/gcp.resourceLocations \
+--project=$PROJECT_ID
+
+-- Cancelar job actual:
+
+gcloud dataflow jobs list --region=$REGION
+gcloud dataflow jobs cancel JOB_ID --region=$REGION
+
+-- Cambiar region y volver a ejecutar desde Paso 6:
+
+export REGION="NUEVA_REGION"
+echo "REGION=$REGION"
+
+gcloud config set compute/region $REGION
+gcloud config set dataflow/region $REGION
+
+
+************************************************
+* En caso de error de bucket duplicado
+************************************************
+
+-- Si el bucket ya existe de un lab anterior usar sufijo distinto:
+export BUCKET_NAME="ventas-${PROJECT_ID}-df2"
+echo "BUCKET_NAME=$BUCKET_NAME"
+gcloud storage buckets create gs://$BUCKET_NAME \
+--project=$PROJECT_ID \
+--location=$REGION
+
+
+************************************************
+* Verificacion rapida del pipeline completo
+************************************************
+-- 1. Verificar que Cloud Run responde:
+
+curl https://ventas-api-336535282841.us-central1.run.app
+-- 2. Verificar mensajes en Pub/Sub:
+
+gcloud pubsub subscriptions pull ventas-sub \
+--limit=5 \
+--auto-ack \
+--project=$PROJECT_ID
+-- 3. Verificar archivos en Cloud Storage:
+
+gcloud storage ls gs://$BUCKET_NAME/samples/output/
+-- 4. Ver job de Dataflow:
+
+gcloud dataflow jobs list --region=$REGION

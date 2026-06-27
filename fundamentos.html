@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXAMEN TRANSVERSAL // FUNDAMENTOS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+
+        :root {
+            --sat-black: #02060a;
+            --panel-bg: rgba(12, 22, 38, 0.8);
+            --mw-white: #e2e8f0;
+            --mw-cyan: #00f0ff;
+            --mw-cyan-dim: rgba(0, 240, 255, 0.15);
+            --mw-gray: #829ab1;
+            --mw-red: #ff2a2a;
+            --mw-green: #39ff14;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair !important; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--sat-black); border-left: 1px solid var(--mw-cyan-dim); }
+        ::-webkit-scrollbar-thumb { background: var(--mw-cyan); }
+
+        body { position: relative;
+            background-color: var(--sat-black); color: var(--mw-gray); font-family: 'Share Tech Mono', monospace; overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* BACKGROUND OVERLAYS */
+        .scanlines { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px); z-index: 9998; pointer-events: none; }
+        .vignette { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 50%, transparent 20%, rgba(0,0,0,0.95) 100%); z-index: 9997; pointer-events: none; }
+        .bg-watermark { position: fixed; top: 50%; left: 60%; transform: translate(-50%, -50%) rotate(0deg); width: 80vw; height: 80vw; border-radius: 50%; border: 1px dashed var(--mw-cyan-dim); z-index: 1; opacity: 0.15; pointer-events: none; animation: spinRotate 200s linear infinite; }
+        .bg-watermark::before { content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--mw-cyan); font-size: 5rem; }
+        @keyframes spinRotate { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        /* HEADER */
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: rgba(0, 0, 0, 0.8); border-bottom: 2px solid var(--mw-cyan); display: flex; align-items: center; padding: 0 50px; z-index: 1000; backdrop-filter: blur(15px); box-shadow: 0 5px 30px rgba(0, 240, 255, 0.1);
+        }
+        .header-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--mw-white); letter-spacing: 8px; text-shadow: 0 0 15px rgba(0,240,255,0.5); }
+        .header-status { margin-left: auto; color: var(--mw-cyan); font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: bold; letter-spacing: 4px; display: flex; align-items: center; gap: 15px; }
+        .status-dot { width: 12px; height: 12px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* MAIN LAYOUT */
+        .container { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; padding-top: 70px; position: relative; z-index: 10; }
+
+        /* SIDEBAR */
+        nav { background: rgba(2, 6, 12, 0.85); border-right: 1px solid var(--mw-cyan-dim); padding: 40px 0; height: calc(100vh - 70px); position: sticky; top: 70px; backdrop-filter: blur(10px); }
+        .nav-title { padding: 0 30px; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--mw-gray); letter-spacing: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        nav ul { list-style: none; }
+        nav a {
+            display: flex; align-items: center; padding: 18px 30px; border-left: 3px solid transparent; cursor: pointer; transition: all 0.3s; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; letter-spacing: 3px; color: var(--mw-gray); text-decoration: none; position: relative; overflow: hidden;
+        }
+        nav a::before { content: ''; position: absolute; left: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent); transition: left 0.5s; }
+        nav a:hover::before { left: 100%; }
+        nav a:hover { color: var(--mw-white); background: rgba(0, 240, 255, 0.05); }
+        nav .active { border-left-color: var(--mw-cyan); color: var(--mw-cyan); background: rgba(0, 240, 255, 0.1); text-shadow: 0 0 10px rgba(0,240,255,0.5); font-weight: bold; }
+        nav .active::after { content: '◄'; position: absolute; right: 20px; color: var(--mw-cyan); animation: slideLeft 1s infinite; }
+        @keyframes slideLeft { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+
+        /* CONTENT */
+        main { padding: 50px 80px; max-width: 1400px; position: relative; }
+        
+        .section {
+            background: var(--panel-bg); border: 1px solid var(--mw-cyan-dim); padding: 50px; margin-bottom: 50px; position: relative; backdrop-filter: blur(10px); opacity: 0; will-change: transform; transform: translateY(30px); animation: fadeInUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Tactical Brackets */
+        .section::before, .section::after { content: ''; position: absolute; width: 30px; height: 30px; border: 2px solid var(--mw-cyan); transition: all 0.3s; }
+        .section::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .section::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .section:hover::before, .section:hover::after { width: 40px; height: 40px; }
+
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--mw-white); letter-spacing: 6px; margin-bottom: 25px; text-align: center; display: flex; align-items: center;
+            justify-content: center; gap: 20px; text-shadow: 0 0 20px rgba(0,240,255,0.4); }
+        .section-title::before { content: ''; width: 10px; height: 40px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); }
+
+        .text-block { font-size: 1.1rem; line-height: 1.8; margin-bottom: 25px; color: #94a3b8; }
+        .text-block strong { color: var(--mw-white); background: rgba(0,240,255,0.15); padding: 2px 6px; border-radius: 3px; border-bottom: 1px solid var(--mw-cyan); }
+
+        /* CARDS / ENDPOINTS */
+        .endpoint-card {
+            background: rgba(0,0,0,0.7); border: 1px solid var(--mw-cyan-dim); padding: 25px; margin-bottom: 20px; position: relative; transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .endpoint-card:hover { transform: translateX(10px); border-color: var(--mw-cyan); box-shadow: -5px 0 20px rgba(0,240,255,0.2); }
+        .endpoint-card::before { content: ''; position: absolute; top:0; left:0; width:4px; height:100%; background: var(--mw-cyan); }
+        
+        .method { font-family: 'Rajdhani', sans-serif; font-weight: bold; padding: 5px 12px; border-radius: 2px; margin-right: 15px; font-size: 1.2rem; letter-spacing: 2px; }
+        .method.get { background: rgba(57, 255, 20, 0.1); color: var(--mw-green); border: 1px solid var(--mw-green); box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
+        .method.post { background: rgba(255, 170, 0, 0.1); color: #ffaa00; border: 1px solid #ffaa00; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); }
+        
+        .url { font-family: 'Share Tech Mono', monospace; font-weight: bold; color: var(--mw-white); font-size: 1.2rem; }
+        .desc { margin-top: 15px; font-size: 1rem; color: var(--mw-gray); border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+
+        /* CODE BOX */
+        .code-box {
+            background: #010409; border: 1px solid #1e293b; border-left: 3px solid var(--mw-cyan); padding: 20px; font-family: 'Share Tech Mono', monospace; font-size: 1rem; color: #38bdf8; margin-top: 20px; white-space: pre-wrap; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .code-box::before { content: 'DECRYPTED PAYLOAD'; position: absolute; top: -12px; left: 15px; background: var(--sat-black); padding: 0 10px; font-size: 0.8rem; color: var(--mw-cyan); letter-spacing: 2px; border: 1px solid var(--mw-cyan-dim); }
+
+        /* ARCHITECTURE DIAGRAMS */
+        .arch-diagram {
+            display: flex; flex-direction: column; gap: 40px; align-items: center; margin: 50px 0; padding: 50px; background: rgba(0, 240, 255, 0.02); border: 1px solid var(--mw-cyan-dim); position: relative;
+        }
+        .arch-diagram::before { content: 'SYSTEM SCHEMATIC'; position: absolute; top: 10px; left: 15px; font-family: 'Rajdhani'; color: var(--mw-gray); letter-spacing: 3px; font-size: 0.9rem; }
+        
+        .node {
+            padding: 20px 40px; border: 2px solid var(--mw-cyan); color: var(--mw-white); font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 3px; background: rgba(0,0,0,0.9); text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.2); transition: all 0.3s; position: relative; cursor: crosshair;
+        }
+        .node:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); background: rgba(0, 240, 255, 0.1); }
+        .node.client { border-color: var(--mw-white); }
+        .node.db { border-color: var(--mw-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
+        .node-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--mw-cyan); display: block; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase; }
+
+        .arrow { width: 3px; height: 40px; background: var(--mw-cyan); position: relative; box-shadow: 0 0 10px var(--mw-cyan); }
+        .arrow::after { content: '▼'; position: absolute; bottom: -12px; left: -7px; color: var(--mw-cyan); font-size: 1rem; text-shadow: 0 0 10px var(--mw-cyan); }
+        
+        .layer-box { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; width: 100%; border: 2px dashed rgba(0, 240, 255, 0.3); padding: 40px; position: relative; background: rgba(0,0,0,0.3); }
+        .layer-title { position: absolute; top: -15px; left: 30px; background: var(--sat-black); padding: 0 15px; color: var(--mw-cyan); font-weight: bold; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; letter-spacing: 3px; border: 1px solid var(--mw-cyan); }
+
+        .footer { text-align: center; color: var(--mw-gray); font-size: 0.9rem; margin-top: 100px; padding-bottom: 50px; letter-spacing: 6px; opacity: 0.5; }
+    
+        /* IMMERSIVE HUD ELEMENTS */
+        .hud-crosshair-x { position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-crosshair-y { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-target { position: absolute; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(0, 240, 255, 0.8); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: all 0.1s ease-out; box-shadow: inset 0 0 10px rgba(0,240,255,0.5); }
+        .hud-target::after { content:''; position:absolute; top:48%; left:48%; width:4px; height:4px; background:var(--mw-cyan); border-radius:50%; }
+
+        .scanner { position: fixed; top: -10%; left: 0; width: 100vw; height: 10vh; background: linear-gradient(to bottom, transparent, rgba(0,240,255,0.15), transparent); animation: scan 4s linear infinite; z-index: 9996; pointer-events: none; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+        
+        #bootOverlay { position:fixed;top:0;left:0;width:100vw;height:100vh;background:#02060a;z-index:10000;display:flex;align-items:center;justify-content:center; flex-direction: column; gap: 20px; transition: opacity 0.5s ease; }
+        .glitch-text { font-family: 'Share Tech Mono', monospace; font-size: 2.5rem; color: var(--mw-cyan); letter-spacing: 15px; position: relative; animation: glitch 1s linear infinite; text-shadow: 0 0 20px var(--mw-cyan); text-align: center;}
+        @keyframes glitch { 2%, 64% { transform: translate(2px,0) skew(0deg); } 4%, 60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
+        
+        @keyframes crtFlicker { 0% { opacity: 0.98; } 5% { opacity: 0.90; filter: contrast(1.2); } 10% { opacity: 0.98; filter: contrast(1); } 100% { opacity: 1; } }
+        body { position: relative; animation: crtFlicker 3s infinite; }
+
+    </style>
+</head>
+<body>
+
+    <div class='hud-crosshair-x' id='hx'></div>
+    <div class='hud-crosshair-y' id='hy'></div>
+    <div class='hud-target' id='ht'></div>
+    <div class='scanner'></div>
+    <div id='bootOverlay'>
+        <div class='glitch-text'>ESTABLISHING SECURE CONNECTION...</div>
+    </div>
+
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="bg-watermark"></div>
+
+    <header>
+        <div class="header-title">EXAMEN TRANSVERSAL // FUNDAMENTOS</div>
+        <div class="header-status">
+            <div class="status-dot"></div>
+            LINK SECURE
+        </div>
+    </header>
+
+    <div class="container">
+        <nav>
+                                    <div class="nav-title">DATABANKS</div>
+            <ul>
+                <a href="/arquitectura.html">1. ARQUITECTURA GENERAL</a>
+                <a href="/componentes.html">2. COMPONENTES</a>
+                <a href="/implementacion.html">3. IMPLEMENTACION</a>
+                <a href="/fundamentos.html" class="active">4. FUNDAMENTOS & DATOS</a>
+            </ul>
+        </nav>
+
+        
+        <main>
+            <div class="section">
+                <div class="section-title">DATABASE PER SERVICE</div>
+                <div class="text-block">
+                    <strong>Database-per-Service:</strong> Cada microservicio (Inventario, Usuario, Mision) posee su propio esquema de datos. Si un servicio necesita datos de otro, debe solicitarlos via <strong>API REST (Feign)</strong>, nunca consultando directamente la BD del compañero. Esto garantiza independencia y aislamiento.
+                </div>
+                <div class="arch-diagram">
+                    <div style="display:flex; gap: 60px; width: 100%; justify-content: center;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                            <div class="node">INVENTARIO-SERVICE</div>
+                            <div class="arrow"></div>
+                            <div class="node db" style="font-size:1.2rem;">DB_INVENTARIO<span class="node-sub">MYSQL</span></div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                            <div class="node">MISION-SERVICE</div>
+                            <div class="arrow"></div>
+                            <div class="node db" style="font-size:1.2rem;">DB_MISION<span class="node-sub">MYSQL</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 0.2s;">
+                <div class="section-title">FUNDAMENTOS — 5V</div>
+                <div class="text-block">
+                    <strong>Volumen:</strong> Sucesion continua de eventos individuales cuya acumulacion justifica el almacenamiento escalable en Cloud Storage.
+                    <br><br>
+                    <strong>Velocidad:</strong> Dimension que define el proyecto. Pipeline streaming con ventanas de 12 segundos, latencia de minutos en lugar de horas (contraste con Batch EV2).
+                    <br><br>
+                    <strong>Variedad:</strong> Datos ingresan como JSON via webhook y se materializan como CSV con campos de texto, temporales y numericos.
+                    <br><br>
+                    <strong>Veracidad:</strong> Diez campos estandarizados (id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg). Limpieza via Alteryx/Dataprep.
+                    <br><br>
+                    <strong>Valor:</strong> Dashboard en Looker Studio con indicadores clave: distribucion por genero, volumen por empresa y montos por producto.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 0.4s;">
+                <div class="section-title">MODELO DE DATOS</div>
+                <div class="text-block">
+                    Esquema CSV final del pipeline streaming:
+                </div>
+                <div class="code-box">
+id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg
+                </div>
+
+                <div class="arch-diagram" style="margin-top:30px;">
+                    <div class="node" style="font-size:1.2rem; border-color:#facc15;">LOOKER STUDIO DASHBOARD</div>
+                    <div style="display:flex; gap:30px; width:100%; justify-content:center; margin-top:20px; flex-wrap:wrap;">
+                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">DISTRIBUCION POR GENERO<span class="node-sub">63.2% M / 36.8% H</span></div>
+                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">PRODUCTOS/EMPRESAS<span class="node-sub">Meta, Salesforce, Alphabet...</span></div>
+                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">MONTO POR PRODUCTO<span class="node-sub">Frecuencia por valor economico</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 0.6s;">
+                <div class="section-title">LATENCIA DEL PIPELINE</div>
+                <div class="text-block">
+                    <strong>Tiempo de procesamiento crudo (Data Lag):</strong> ~37 segundos — velocidad de reaccion interna de Dataflow al detectar y procesar el mensaje en memoria RAM.
+                    <br><br>
+                    <strong>Latencia de disponibilidad final:</strong> ~12 minutos — tiempo hasta que el dato se guarda fisicamente como archivo CSV en Cloud Storage.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 0.8s;">
+                <div class="section-title">ANALISIS DE DATOS</div>
+                <div class="text-block">
+                    <strong>Dataset final:</strong> ~5,600 registros de transacciones de subasta, cada uno con 10 campos. Los datos fueron generados via webhook simulado durante la evaluacion.
+                    <br><br>
+                    <strong>Hallazgos clave del dashboard:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Distribucion por genero:</strong> 63.2% femenino, 36.8% masculino, reflejando la composicion demografica de los participantes en la subasta.</li>
+                        <li><strong>Volumen por empresa:</strong> Meta, Salesforce y Alphabet muestran la mayor frecuencia de transacciones, consistente con su presencia en el mercado de componentes tecnologicos.</li>
+                        <li><strong>Montos por producto:</strong> Los productos de mayor valor economico concentran las transacciones mas significativas, con una distribucion de cola larga tipica de mercados de subasta.</li>
+                        <li><strong>Forma de pago:</strong> La mayoria de las transacciones se concentran en un metodo de pago predominante, lo que sugiere estandarizacion en el proceso de compra.</li>
+                    </ul>
+                    <br>
+                    <strong>Conclusiones:</strong> El pipeline de streaming demuestra la capacidad de capturar, procesar y visualizar datos en tiempo real con una latencia aceptable para aplicaciones de monitoreo operacional. La arquitectura serverless de GCP (Cloud Run + Pub/Sub + Dataflow) permite escalar automaticamente segun la carga de eventos, eliminando la necesidad de gestionar infraestructura. Las ventanas de 12 segundos en Dataflow ofrecen un balance entre granularidad de datos y volumen de archivos generados.
+                    <br><br>
+                    <strong>Recomendaciones:</strong> Implementar Cloud Scheduler para pruebas automatizadas, configurar alertas de monitoreo en Cloud Monitoring, y evaluar BigQuery como destino final para habilitar consultas SQL sobre los datos en tiempo real. Para produccion, considerar retencion de mensajes extendida en Pub/Sub y particionamiento por fecha en Cloud Storage.
+                </div>
+            </div>
+
+            <div class="section" style="animation-delay: 1.0s;">
+                <div class="section-title">TECNOLOGIAS DEL PIPELINE</div>
+                <div class="text-block">
+                    El pipeline de datos se sostiene sobre un stack tecnologico que abarca desde la ingesta hasta la visualizacion:
+                    <br><br>
+                    <strong>Ingesta (Cloud Run + Python/Flask):</strong> Microservicio REST que recibe eventos via HTTP POST. Desplegado como contenedor serverless, escala a cero cuando no hay trafico. Codigo en Python con framework Flask, manejando errores de API de Google y reintentos.
+                    <br><br>
+                    <strong>Mensajeria (Pub/Sub):</strong> Bus de eventos asincrono con persistencia de 7 dias. Desacopla la produccion del consumo, permitiendo que el webhook y Dataflow operen independientemente. Garantiza entrega at-least-once.
+                    <br><br>
+                    <strong>Procesamiento (Dataflow + Apache Beam):</strong> Pipeline en Java con ventanas fijas de 12 segundos. Autoescalado hasta 10 workers. Lee de Pub/Sub via <code>PubsubIO</code> y escribe CSV particionados a Cloud Storage. El pipeline se monitorea desde la UI de Dataflow con metricas de throughput y lag.
+                    <br><br>
+                    <strong>Almacenamiento (Cloud Storage):</strong> Data Lake con carpetas estructuradas (temp/, staging/, samples/output/). Politica TTL de 30 dias para control de costos. Los CSV generados son la fuente de datos para las herramientas de visualizacion.
+                    <br><br>
+                    <strong>Preparacion (Alteryx / Dataprep):</strong> ETL visual para limpiar y estandarizar datos. Alteryx ofrece nodos de transformacion avanzada; Dataprep es la alternativa nativa GCP integrada directamente con Cloud Storage.
+                    <br><br>
+                    <strong>Visualizacion (Looker Studio):</strong> Dashboard interactivo con 8 graficos conectado a Cloud Storage. Actualizacion cada 15 minutos. Las metricas clave incluyen distribucion por genero, volumen por empresa y montos por producto.
+                    <br><br>
+                    <strong>Infraestructura (GCP Console + PowerShell):</strong> Gestion dual via interfaz web (GCP Console) y automatizacion por script (PowerShell/gcloud CLI). La consola web es ideal para configuracion inicial y monitoreo; los scripts garantizan despliegues repetibles y documentados.
+                </div>
+            </div>
+
+            <div class="footer">
+                END OF DATA INTEL // TASK FORCE 141
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playClickSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        document.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => playClickSound());
+        });
+    
+        document.addEventListener('mousemove', (e) => {
+            const hx = document.getElementById('hx');
+            const hy = document.getElementById('hy');
+            const ht = document.getElementById('ht');
+            
+            hx.style.top = e.pageY + 'px';
+            hy.style.left = e.pageX + 'px';
+            
+            ht.style.top = e.pageY + 'px';
+            ht.style.left = e.pageX + 'px';
+        });
+
+        
+        document.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            const wh = window.innerHeight;
+            sections.forEach(s => {
+                const rect = s.getBoundingClientRect();
+                const center = rect.top + rect.height / 2;
+                const offset = (center - wh / 2) / wh;
+                s.style.transform = `translateY(${offset * -6}px)`;
+            });
+        });
+
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('bootOverlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('bootOverlay').style.display = 'none', 500);
+            }, 800);
+        };
+
+    </script>
+</body>
+</html>
