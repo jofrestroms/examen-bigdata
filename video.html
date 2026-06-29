@@ -205,7 +205,7 @@
                     </div>
                     <div class="corner-tag">JSOC // CLASSIFIED</div>
                     <video id="videoPlayer" preload="metadata">
-                        <source src="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo+proceso+striming.mp4" type="video/mp4">
+                        <source src="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo.proceso.striming.mp4" type="video/mp4">
                     </video>
 
                     <div class="custom-controls" id="customControls">
@@ -310,7 +310,7 @@
         });
 
         video.addEventListener('timeupdate', () => {
-            const pct = (video.currentTime / video.duration) * 100 || 0;
+            const pct = isFinite(video.duration) ? (video.currentTime / video.duration) * 100 : 0;
             progressBar.style.width = pct + '%';
             progressHandle.style.left = pct + '%';
             currentTime.textContent = formatTime(video.currentTime);
@@ -326,7 +326,7 @@
 
         function togglePlay() {
             if (video.paused) {
-                video.play();
+                video.play().catch(() => {});
                 playBtn.textContent = '❚❚';
                 bigPlayOverlay.classList.add('hidden');
             } else {
@@ -368,7 +368,7 @@
             const rect = progressWrap.getBoundingClientRect();
             let pct = (e.clientX - rect.left) / rect.width;
             pct = Math.max(0, Math.min(1, pct));
-            video.currentTime = pct * video.duration;
+            if (isFinite(video.duration)) video.currentTime = pct * video.duration;
             progressBar.style.width = (pct * 100) + '%';
             progressHandle.style.left = (pct * 100) + '%';
         }
