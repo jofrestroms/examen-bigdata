@@ -51,7 +51,7 @@
 
         main { padding: 50px 80px; max-width: 1600px; margin: 0 auto; position: relative; }
 
-        .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .video-stack { display: flex; flex-direction: column; gap: 60px; }
 
         .section {
             border: 1px solid var(--mw-cyan-dim); padding: 50px; margin-bottom: 50px; position: relative; opacity: 0; transform: translateY(30px); animation: fadeInUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards;
@@ -201,7 +201,7 @@
                     Use los controles para reproducir, pausar y navegar al punto exacto de cada metraje.
                 </div>
 
-                <div class="video-grid">
+                <div class="video-stack">
 
                     <!-- BASH VIDEO -->
                     <div>
