@@ -49,7 +49,9 @@
         .glitch-text { font-family: 'Share Tech Mono', monospace; font-size: 2.5rem; color: var(--mw-cyan); letter-spacing: 15px; position: relative; animation: glitch 1s linear infinite; text-shadow: 0 0 20px var(--mw-cyan); text-align: center;}
         @keyframes glitch { 2%, 64% { transform: translate(2px,0) skew(0deg); } 4%, 60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
 
-        main { padding: 50px 80px; max-width: 1400px; margin: 0 auto; position: relative; }
+        main { padding: 50px 80px; max-width: 1600px; margin: 0 auto; position: relative; }
+
+        .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
 
         .section {
             border: 1px solid var(--mw-cyan-dim); padding: 50px; margin-bottom: 50px; position: relative; opacity: 0; transform: translateY(30px); animation: fadeInUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards;
@@ -183,11 +185,7 @@
     <header>
         <a href="/index.html" style="background:none;border:1px solid var(--mw-cyan-dim);color:var(--mw-cyan);padding:8px 20px;font-family:'Share Tech Mono',monospace;font-size:0.9rem;letter-spacing:2px;text-decoration:none;transition:all 0.3s;margin-right:25px;cursor:pointer;" onmouseover="this.style.background='var(--mw-cyan)';this.style.color='#000';this.style.borderColor='var(--mw-cyan)';this.style.boxShadow='0 0 15px rgba(0,240,255,0.4)';" onmouseout="this.style.background='none';this.style.color='var(--mw-cyan)';this.style.borderColor='var(--mw-cyan-dim)';this.style.boxShadow='none';">◂ RETURN</a>
         <div class="header-title">EXAMEN TRANSVERSAL // ARCHIVE</div>
-        <div class="header-status" style="display:flex;align-items:center;gap:20px;">
-            <select id="videoSelector" style="background:rgba(0,0,0,0.9);border:1px solid var(--mw-cyan-dim);color:var(--mw-cyan);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:6px 12px;letter-spacing:1px;cursor:crosshair;outline:none;">
-                <option value="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo.proceso.striming.mp4" selected>STREAMING (EV3)</option>
-                <option value="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/video.proceso.bash.mp4">BASH (EV2)</option>
-            </select>
+        <div class="header-status">
             <div class="status-dot"></div>
             LINK SECURE
         </div>
@@ -196,62 +194,115 @@
     <div class="container">
         <main>
             <div class="section">
-                <div class="section-title">OPERATION RECORDING</div>
+                <div class="section-title">OPERATION RECORDINGS</div>
                 <div class="text-block">
                     <strong>CLASSIFIED FOOTAGE</strong> // EXAMEN TRANSVERSAL — DAY 3, 0100 HRS
                     <br><br>
-                    Use los controles para reproducir, pausar y navegar al punto exacto del metraje.
-                    <br>
-                    Seleccione el modo de operaci&oacute;n: <strong id="currentVideoLabel">STREAMING (EV3)</strong>
+                    Use los controles para reproducir, pausar y navegar al punto exacto de cada metraje.
                 </div>
 
-                <div class="video-wrapper" id="videoWrapper">
-                    <div class="big-play-overlay" id="bigPlayOverlay">
-                        <div class="big-play-icon">▶</div>
-                    </div>
-                    <div class="corner-tag">JSOC // CLASSIFIED</div>
-                    <video id="videoPlayer" preload="metadata">
-                        <source src="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo.proceso.striming.mp4" type="video/mp4">
-                    </video>
+                <div class="video-grid">
 
-                    <div class="custom-controls" id="customControls">
-                        <div class="progress-wrap" id="progressWrap">
-                            <div class="progress-buffer" id="progressBuffer"></div>
-                            <div class="progress-bar" id="progressBar"></div>
-                            <div class="progress-handle" id="progressHandle"></div>
-                        </div>
-
-                        <div class="controls-bottom">
-                            <div class="controls-left">
-                                <button class="ctrl-btn" id="playBtn" title="Play / Pause">▶</button>
-                                <div class="time-display">
-                                    <span class="current" id="currentTime">0:00</span>
-                                    <span class="time-divider">/</span>
-                                    <span id="totalTime">0:00</span>
+                    <!-- BASH VIDEO -->
+                    <div>
+                        <div class="section-title" style="font-size:2rem; margin-bottom:15px;">PROCESO BASH (EV2)</div>
+                        <div class="video-wrapper" id="videoWrapper1">
+                            <div class="big-play-overlay" id="bigPlayOverlay1">
+                                <div class="big-play-icon">▶</div>
+                            </div>
+                            <div class="corner-tag">JSOC // BATCH</div>
+                            <video id="videoPlayer1" preload="metadata">
+                                <source src="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/video.proceso.bash.mp4" type="video/mp4">
+                            </video>
+                            <div class="custom-controls" id="customControls1">
+                                <div class="progress-wrap" id="progressWrap1">
+                                    <div class="progress-buffer" id="progressBuffer1"></div>
+                                    <div class="progress-bar" id="progressBar1"></div>
+                                    <div class="progress-handle" id="progressHandle1"></div>
                                 </div>
-                                <div class="volume-wrap">
-                                    <button class="ctrl-btn" id="muteBtn" title="Mute" style="font-size:1rem;">🔊</button>
-                                    <div class="volume-slider" id="volumeSlider">
-                                        <div class="volume-fill" id="volumeFill"></div>
+                                <div class="controls-bottom">
+                                    <div class="controls-left">
+                                        <button class="ctrl-btn play-btn" data-player="1">▶</button>
+                                        <div class="time-display">
+                                            <span class="current" id="currentTime1">0:00</span>
+                                            <span class="time-divider">/</span>
+                                            <span id="totalTime1">0:00</span>
+                                        </div>
+                                        <div class="volume-wrap">
+                                            <button class="ctrl-btn mute-btn" data-player="1" style="font-size:1rem;">🔊</button>
+                                            <div class="volume-slider" data-player="1">
+                                                <div class="volume-fill" id="volumeFill1"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="controls-right">
+                                        <div class="speed-menu">
+                                            <button class="speed-btn" id="speedBtn1">1×</button>
+                                            <div class="speed-dropdown" id="speedDropdown1">
+                                                <button class="speed-opt" data-speed="0.25">0.25×</button>
+                                                <button class="speed-opt" data-speed="0.5">0.5×</button>
+                                                <button class="speed-opt" data-speed="1" class="active">1×</button>
+                                                <button class="speed-opt" data-speed="1.5">1.5×</button>
+                                                <button class="speed-opt" data-speed="2">2×</button>
+                                            </div>
+                                        </div>
+                                        <button class="ctrl-btn fullscreen-btn" data-player="1">⛶</button>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="controls-right">
-                                <div class="speed-menu" id="speedMenu">
-                                    <button class="speed-btn" id="speedBtn">1×</button>
-                                    <div class="speed-dropdown" id="speedDropdown">
-                                        <button class="speed-opt" data-speed="0.25">0.25×</button>
-                                        <button class="speed-opt" data-speed="0.5">0.5×</button>
-                                        <button class="speed-opt" data-speed="1" class="active">1×</button>
-                                        <button class="speed-opt" data-speed="1.5">1.5×</button>
-                                        <button class="speed-opt" data-speed="2">2×</button>
+                    <!-- STREAMING VIDEO -->
+                    <div>
+                        <div class="section-title" style="font-size:2rem; margin-bottom:15px;">PROCESO STREAMING (EV3)</div>
+                        <div class="video-wrapper" id="videoWrapper2">
+                            <div class="big-play-overlay" id="bigPlayOverlay2">
+                                <div class="big-play-icon">▶</div>
+                            </div>
+                            <div class="corner-tag">JSOC // STREAMING</div>
+                            <video id="videoPlayer2" preload="metadata">
+                                <source src="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo.proceso.striming.mp4" type="video/mp4">
+                            </video>
+                            <div class="custom-controls" id="customControls2">
+                                <div class="progress-wrap" id="progressWrap2">
+                                    <div class="progress-buffer" id="progressBuffer2"></div>
+                                    <div class="progress-bar" id="progressBar2"></div>
+                                    <div class="progress-handle" id="progressHandle2"></div>
+                                </div>
+                                <div class="controls-bottom">
+                                    <div class="controls-left">
+                                        <button class="ctrl-btn play-btn" data-player="2">▶</button>
+                                        <div class="time-display">
+                                            <span class="current" id="currentTime2">0:00</span>
+                                            <span class="time-divider">/</span>
+                                            <span id="totalTime2">0:00</span>
+                                        </div>
+                                        <div class="volume-wrap">
+                                            <button class="ctrl-btn mute-btn" data-player="2" style="font-size:1rem;">🔊</button>
+                                            <div class="volume-slider" data-player="2">
+                                                <div class="volume-fill" id="volumeFill2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="controls-right">
+                                        <div class="speed-menu">
+                                            <button class="speed-btn" id="speedBtn2">1×</button>
+                                            <div class="speed-dropdown" id="speedDropdown2">
+                                                <button class="speed-opt" data-speed="0.25">0.25×</button>
+                                                <button class="speed-opt" data-speed="0.5">0.5×</button>
+                                                <button class="speed-opt" data-speed="1" class="active">1×</button>
+                                                <button class="speed-opt" data-speed="1.5">1.5×</button>
+                                                <button class="speed-opt" data-speed="2">2×</button>
+                                            </div>
+                                        </div>
+                                        <button class="ctrl-btn fullscreen-btn" data-player="2">⛶</button>
                                     </div>
                                 </div>
-                                <button class="ctrl-btn fullscreen-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -287,165 +338,151 @@
             }, 800);
         };
 
-        const video = document.getElementById('videoPlayer');
-        const playBtn = document.getElementById('playBtn');
-        const progressBar = document.getElementById('progressBar');
-        const progressHandle = document.getElementById('progressHandle');
-        const progressBuffer = document.getElementById('progressBuffer');
-        const progressWrap = document.getElementById('progressWrap');
-        const currentTime = document.getElementById('currentTime');
-        const totalTime = document.getElementById('totalTime');
-        const muteBtn = document.getElementById('muteBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const volumeFill = document.getElementById('volumeFill');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const bigPlayOverlay = document.getElementById('bigPlayOverlay');
-        const speedBtn = document.getElementById('speedBtn');
-        const speedDropdown = document.getElementById('speedDropdown');
-        const speedOpts = document.querySelectorAll('.speed-opt');
+        function initPlayer(playerId) {
+            const video = document.getElementById('videoPlayer' + playerId);
+            const playBtn = document.querySelector('[data-player="' + playerId + '"].play-btn, .playBtn[data-player="' + playerId + '"]');
+            const progressBar = document.getElementById('progressBar' + playerId);
+            const progressHandle = document.getElementById('progressHandle' + playerId);
+            const progressBuffer = document.getElementById('progressBuffer' + playerId);
+            const progressWrap = document.getElementById('progressWrap' + playerId);
+            const currentTime = document.getElementById('currentTime' + playerId);
+            const totalTime = document.getElementById('totalTime' + playerId);
+            const muteBtn = document.querySelector('.mute-btn[data-player="' + playerId + '"]');
+            const volumeSlider = document.querySelector('.volume-slider[data-player="' + playerId + '"]');
+            const volumeFill = document.getElementById('volumeFill' + playerId);
+            const fullscreenBtn = document.querySelector('.fullscreen-btn[data-player="' + playerId + '"]');
+            const bigPlayOverlay = document.getElementById('bigPlayOverlay' + playerId);
+            const speedBtn = document.getElementById('speedBtn' + playerId);
+            const speedDropdown = document.getElementById('speedDropdown' + playerId);
+            const speedOpts = speedDropdown.querySelectorAll('.speed-opt');
+            const wrapper = document.getElementById('videoWrapper' + playerId);
 
-        function formatTime(s) {
-            if (isNaN(s) || !isFinite(s)) return '0:00';
-            const m = Math.floor(s / 60);
-            const sec = Math.floor(s % 60);
-            return m + ':' + (sec < 10 ? '0' : '') + sec;
-        }
+            if (!playBtn) return;
 
-        video.addEventListener('loadedmetadata', () => {
-            totalTime.textContent = formatTime(video.duration);
-        });
-
-        video.addEventListener('timeupdate', () => {
-            const pct = isFinite(video.duration) ? (video.currentTime / video.duration) * 100 : 0;
-            progressBar.style.width = pct + '%';
-            progressHandle.style.left = pct + '%';
-            currentTime.textContent = formatTime(video.currentTime);
-        });
-
-        video.addEventListener('progress', () => {
-            if (video.buffered.length > 0) {
-                const end = video.buffered.end(video.buffered.length - 1);
-                const pct = (end / video.duration) * 100 || 0;
-                progressBuffer.style.width = pct + '%';
+            function formatTime(s) {
+                if (isNaN(s) || !isFinite(s)) return '0:00';
+                const m = Math.floor(s / 60);
+                const sec = Math.floor(s % 60);
+                return m + ':' + (sec < 10 ? '0' : '') + sec;
             }
-        });
 
-        function togglePlay() {
-            if (video.paused) {
-                video.play().catch(() => {});
-                playBtn.textContent = '❚❚';
-                bigPlayOverlay.classList.add('hidden');
-            } else {
-                video.pause();
+            video.addEventListener('loadedmetadata', () => {
+                totalTime.textContent = formatTime(video.duration);
+            });
+
+            video.addEventListener('timeupdate', () => {
+                const pct = isFinite(video.duration) ? (video.currentTime / video.duration) * 100 : 0;
+                progressBar.style.width = pct + '%';
+                progressHandle.style.left = pct + '%';
+                currentTime.textContent = formatTime(video.currentTime);
+            });
+
+            video.addEventListener('progress', () => {
+                if (video.buffered.length > 0) {
+                    const end = video.buffered.end(video.buffered.length - 1);
+                    const pct = (end / video.duration) * 100 || 0;
+                    progressBuffer.style.width = pct + '%';
+                }
+            });
+
+            function togglePlay() {
+                if (video.paused) {
+                    video.play().catch(() => {});
+                    playBtn.textContent = '❚❚';
+                    bigPlayOverlay.classList.add('hidden');
+                } else {
+                    video.pause();
+                    playBtn.textContent = '▶';
+                    bigPlayOverlay.classList.remove('hidden');
+                }
+            }
+
+            playBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
+            video.addEventListener('click', togglePlay);
+            bigPlayOverlay.addEventListener('click', togglePlay);
+
+            video.addEventListener('pause', () => {
                 playBtn.textContent = '▶';
                 bigPlayOverlay.classList.remove('hidden');
-            }
-        }
-
-        playBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
-        video.addEventListener('click', togglePlay);
-        bigPlayOverlay.addEventListener('click', togglePlay);
-
-        video.addEventListener('pause', () => {
-            playBtn.textContent = '▶';
-            bigPlayOverlay.classList.remove('hidden');
-        });
-        video.addEventListener('play', () => {
-            playBtn.textContent = '❚❚';
-            bigPlayOverlay.classList.add('hidden');
-        });
-
-        video.addEventListener('ended', () => {
-            playBtn.textContent = '▶';
-            bigPlayOverlay.classList.remove('hidden');
-        });
-
-        let isDragging = false;
-        progressWrap.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            setProgress(e);
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) setProgress(e);
-        });
-        document.addEventListener('mouseup', () => { isDragging = false; });
-
-        function setProgress(e) {
-            const rect = progressWrap.getBoundingClientRect();
-            let pct = (e.clientX - rect.left) / rect.width;
-            pct = Math.max(0, Math.min(1, pct));
-            if (isFinite(video.duration)) video.currentTime = pct * video.duration;
-            progressBar.style.width = (pct * 100) + '%';
-            progressHandle.style.left = (pct * 100) + '%';
-        }
-
-        muteBtn.addEventListener('click', () => {
-            video.muted = !video.muted;
-            muteBtn.textContent = video.muted ? '🔇' : '🔊';
-        });
-
-        volumeSlider.addEventListener('click', (e) => {
-            const rect = volumeSlider.getBoundingClientRect();
-            const pct = (e.clientX - rect.left) / rect.width;
-            video.volume = Math.max(0, Math.min(1, pct));
-            volumeFill.style.width = (video.volume * 100) + '%';
-            muteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
-        });
-
-        video.volume = 1;
-        volumeFill.style.width = '100%';
-
-        fullscreenBtn.addEventListener('click', () => {
-            const wrapper = document.getElementById('videoWrapper');
-            if (!document.fullscreenElement) {
-                if (wrapper.requestFullscreen) wrapper.requestFullscreen();
-                else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
-        });
-
-        speedBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            speedDropdown.classList.toggle('open');
-        });
-        document.addEventListener('click', () => speedDropdown.classList.remove('open'));
-
-        speedOpts.forEach(opt => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const speed = parseFloat(opt.dataset.speed);
-                video.playbackRate = speed;
-                speedBtn.textContent = speed + '×';
-                speedOpts.forEach(o => o.classList.remove('active'));
-                opt.classList.add('active');
-                speedDropdown.classList.remove('open');
             });
-        });
+            video.addEventListener('play', () => {
+                playBtn.textContent = '❚❚';
+                bigPlayOverlay.classList.add('hidden');
+            });
+            video.addEventListener('ended', () => {
+                playBtn.textContent = '▶';
+                bigPlayOverlay.classList.remove('hidden');
+            });
 
-        video.addEventListener('dblclick', () => {
-            fullscreenBtn.click();
-        });
+            let isDragging = false;
+            progressWrap.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                setProgress(e);
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) setProgress(e);
+            });
+            document.addEventListener('mouseup', () => { isDragging = false; });
 
-        // VIDEO SELECTOR
-        const videoSelector = document.getElementById('videoSelector');
-        const currentVideoLabel = document.getElementById('currentVideoLabel');
-        videoSelector.addEventListener('change', () => {
-            const wasPaused = video.paused;
-            const currentTime = video.currentTime;
-            const source = video.querySelector('source');
-            source.src = videoSelector.value;
-            video.load();
-            if (!wasPaused) {
-                video.currentTime = currentTime;
-                video.play().catch(() => {});
+            function setProgress(e) {
+                const rect = progressWrap.getBoundingClientRect();
+                let pct = (e.clientX - rect.left) / rect.width;
+                pct = Math.max(0, Math.min(1, pct));
+                if (isFinite(video.duration)) video.currentTime = pct * video.duration;
+                progressBar.style.width = (pct * 100) + '%';
+                progressHandle.style.left = (pct * 100) + '%';
             }
-            currentVideoLabel.textContent = videoSelector.options[videoSelector.selectedIndex].text;
-            progressBuffer.style.width = '0%';
-            playBtn.textContent = '▶';
-            bigPlayOverlay.classList.remove('hidden');
-        });
+
+            muteBtn.addEventListener('click', () => {
+                video.muted = !video.muted;
+                muteBtn.textContent = video.muted ? '🔇' : '🔊';
+            });
+
+            volumeSlider.addEventListener('click', (e) => {
+                const rect = volumeSlider.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                video.volume = Math.max(0, Math.min(1, pct));
+                volumeFill.style.width = (video.volume * 100) + '%';
+                muteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+            });
+            video.volume = 1;
+            volumeFill.style.width = '100%';
+
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+                    else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+            });
+
+            speedBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                speedDropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', () => speedDropdown.classList.remove('open'));
+
+            speedOpts.forEach(opt => {
+                opt.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const speed = parseFloat(opt.dataset.speed);
+                    video.playbackRate = speed;
+                    speedBtn.textContent = speed + '×';
+                    speedOpts.forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    speedDropdown.classList.remove('open');
+                });
+            });
+
+            video.addEventListener('dblclick', () => {
+                fullscreenBtn.click();
+            });
+        }
+
+        initPlayer(1);
+        initPlayer(2);
     </script>
 </body>
 </html>
