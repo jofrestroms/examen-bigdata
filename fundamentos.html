@@ -182,108 +182,164 @@
         </nav>
 
         
-        <main>
-            <div class="section">
-                <div class="section-title">DATABASE PER SERVICE</div>
-                <div class="text-block">
-                    <strong>Database-per-Service:</strong> Cada microservicio (Inventario, Usuario, Mision) posee su propio esquema de datos. Si un servicio necesita datos de otro, debe solicitarlos via <strong>API REST (Feign)</strong>, nunca consultando directamente la BD del compañero. Esto garantiza independencia y aislamiento.
-                </div>
-                <div class="arch-diagram">
-                    <div style="display:flex; gap: 60px; width: 100%; justify-content: center;">
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
-                            <div class="node">INVENTARIO-SERVICE</div>
-                            <div class="arrow"></div>
-                            <div class="node db" style="font-size:1.2rem;">DB_INVENTARIO<span class="node-sub">MYSQL</span></div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
-                            <div class="node">MISION-SERVICE</div>
-                            <div class="arrow"></div>
-                            <div class="node db" style="font-size:1.2rem;">DB_MISION<span class="node-sub">MYSQL</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<main>
 
-            <div class="section" style="animation-delay: 0.2s;">
-                <div class="section-title">FUNDAMENTOS — 5V</div>
-                <div class="text-block">
-                    <strong>Volumen:</strong> Sucesion continua de eventos individuales cuya acumulacion justifica el almacenamiento escalable en Cloud Storage.
+            <!-- ========== SECTION 1: FUNDAMENTOS 5V — EV2 + EV3 ========== -->
+            <div class="section">
+                <div class="section-title">FUNDAMENTOS BIG DATA &mdash; 5V</div>
+                <div class="text-block" style="border-left:3px solid var(--mw-green); padding-left:20px; margin-bottom:30px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.8rem; color:var(--mw-green); letter-spacing:4px; margin-bottom:10px;">EV2 &mdash; PIPELINE BATCH (NYC TLC TAXI)</div>
+                    <strong>Volumen:</strong> Dataset de 387.7 MB en CSV (millones de registros de viajes individuales), excediendo la capacidad de herramientas ofimaticas tradicionales y justificando Cloud Storage + BigQuery.
                     <br><br>
-                    <strong>Velocidad:</strong> Dimension que define el proyecto. Pipeline streaming con ventanas de 12 segundos, latencia de minutos en lugar de horas (contraste con Batch EV2).
+                    <strong>Velocidad:</strong> Pipeline Batch orquestado por Cloud Scheduler con ingesta periodica programada. Procesamiento por lotes del dataset completo de NYC Yellow Taxi Trip Data (Enero 2026).
                     <br><br>
-                    <strong>Variedad:</strong> Datos ingresan como JSON via webhook y se materializan como CSV con campos de texto, temporales y numericos.
+                    <strong>Variedad:</strong> Datos en formato Parquet, materializados como CSV tabular con tipos heterogeneos: texto (VendorID), temporales (tpep_pickup_datetime, tpep_dropoff_datetime), numericas (trip_distance, fare_amount, tip_amount, tolls_amount, total_amount).
+                    <br><br>
+                    <strong>Veracidad:</strong> ETL con reglas estrictas: eliminacion de registros con trip_distance &le; 0, total_amount &le; 0, valores nulos en payment_type y RatecodeID, deduplicacion exacta, y filtro de anomalias temporales.
+                    <br><br>
+                    <strong>Valor:</strong> Dashboard en Power BI con conectado a BigQuery: distribucion horaria, zonas de alta demanda, analisis de tarifas, KPI operativos (distancia promedio, ingresos por dia, propinas por zona).
+                </div>
+                <div class="text-block" style="border-left:3px solid var(--mw-cyan); padding-left:20px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.8rem; color:var(--mw-cyan); letter-spacing:4px; margin-bottom:10px;">EV3 &mdash; PIPELINE STREAMING (SUBASTA COMPONENTES)</div>
+                    <strong>Volumen:</strong> Sucesion continua de eventos individuales (~5,600 registros) cuya acumulacion justifica el almacenamiento escalable en Cloud Storage.
+                    <br><br>
+                    <strong>Velocidad:</strong> Pipeline streaming con ventanas de 12 segundos en Dataflow, latencia de ~37 segundos (data lag) y ~12 minutos (disponibilidad final). Contraste directo con el modelo Batch de EV2 (horas).
+                    <br><br>
+                    <strong>Variedad:</strong> Datos ingresan como JSON via webhook HTTP POST y se materializan como CSV con campos de texto (cliente, producto, forma_pago), temporales (fecreg) y numericos (precio, cantidad, monto).
                     <br><br>
                     <strong>Veracidad:</strong> Diez campos estandarizados (id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg). Limpieza via Alteryx/Dataprep.
                     <br><br>
-                    <strong>Valor:</strong> Dashboard en Looker Studio con indicadores clave: distribucion por genero, volumen por empresa y montos por producto.
+                    <strong>Valor:</strong> Dashboard en Looker Studio: distribucion por genero (63.2% M / 36.8% H), volumen por empresa (Meta, Salesforce, Alphabet), montos por producto.
                 </div>
             </div>
 
-            <div class="section" style="animation-delay: 0.4s;">
+            <!-- ========== SECTION 2: MODELO DE DATOS — EV2 + EV3 ========== -->
+            <div class="section" style="animation-delay: 0.15s;">
                 <div class="section-title">MODELO DE DATOS</div>
-                <div class="text-block">
+                <div class="text-block" style="border-left:3px solid var(--mw-green); padding-left:20px; margin-bottom:30px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-green); letter-spacing:4px; margin-bottom:10px;">EV2 &mdash; NYC TLC YELLOW TAXI</div>
+                    Esquema final procesado en BigQuery (tabla <code style="color:var(--mw-cyan);">Dataprep.taxis_limpios</code>):
+                </div>
+                <div class="code-box" style="border-left-color:var(--mw-green); margin-bottom:30px;">
+VendorID, tpep_pickup_datetime, tpep_dropoff_datetime, passenger_count,
+trip_distance, RatecodeID, store_and_fwd_flag, PULocationID, DOLocationID,
+payment_type, fare_amount, extra, mta_tax, tip_amount, tolls_amount,
+improvement_surcharge, total_amount, congestion_surcharge, Airport_fee
+                </div>
+                <div class="text-block" style="border-left:3px solid var(--mw-cyan); padding-left:20px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-cyan); letter-spacing:4px; margin-bottom:10px;">EV3 &mdash; SUBASTA DE COMPONENTES</div>
                     Esquema CSV final del pipeline streaming:
                 </div>
-                <div class="code-box">
-id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg
+                <div class="code-box" style="border-left-color:var(--mw-cyan);">
+                    id_cliente, cliente, genero, id_producto, producto, precio, cantidad, monto, forma_pago, fecreg
                 </div>
+            </div>
 
-                <div class="arch-diagram" style="margin-top:30px;">
-                    <div class="node" style="font-size:1.2rem; border-color:#facc15;">LOOKER STUDIO DASHBOARD</div>
-                    <div style="display:flex; gap:30px; width:100%; justify-content:center; margin-top:20px; flex-wrap:wrap;">
-                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">DISTRIBUCION POR GENERO<span class="node-sub">63.2% M / 36.8% H</span></div>
-                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">PRODUCTOS/EMPRESAS<span class="node-sub">Meta, Salesforce, Alphabet...</span></div>
-                        <div class="node" style="font-size:0.9rem; padding:15px 20px;">MONTO POR PRODUCTO<span class="node-sub">Frecuencia por valor economico</span></div>
+            <!-- ========== SECTION 3: COMPARATIVA DE LATENCIA ========== -->
+            <div class="section" style="animation-delay: 0.3s;">
+                <div class="section-title">COMPARATIVA DE LATENCIA</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                    <div class="endpoint-card" style="border-left-color:var(--mw-green);">
+                        <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-green); letter-spacing:3px;">EV2 &mdash; BATCH</div>
+                        <div class="desc">
+                            <strong>Frecuencia de ingesta:</strong> Cada minuto via Cloud Scheduler<br>
+                            <strong>Tiempo de procesamiento:</strong> Minutos a horas (dataset completo de ~387.7 MB)<br>
+                            <strong>Modelo:</strong> Procesamiento por lotes (batch) del archivo Parquet completo<br>
+                            <strong>Disponibilidad:</strong> Tras finalizar el ETL completo y carga a BigQuery
+                        </div>
+                    </div>
+                    <div class="endpoint-card" style="border-left-color:var(--mw-cyan);">
+                        <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-cyan); letter-spacing:3px;">EV3 &mdash; STREAMING</div>
+                        <div class="desc">
+                            <strong>Ventana de procesamiento:</strong> 12 segundos en Dataflow<br>
+                            <strong>Data lag (crudo):</strong> ~37 segundos (reaccion interna en RAM)<br>
+                            <strong>Latencia final:</strong> ~12 minutos hasta CSV en Cloud Storage<br>
+                            <strong>Modelo:</strong> Procesamiento continuo de eventos individuales
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="section" style="animation-delay: 0.6s;">
-                <div class="section-title">LATENCIA DEL PIPELINE</div>
-                <div class="text-block">
-                    <strong>Tiempo de procesamiento crudo (Data Lag):</strong> ~37 segundos — velocidad de reaccion interna de Dataflow al detectar y procesar el mensaje en memoria RAM.
-                    <br><br>
-                    <strong>Latencia de disponibilidad final:</strong> ~12 minutos — tiempo hasta que el dato se guarda fisicamente como archivo CSV en Cloud Storage.
-                </div>
-            </div>
-
-            <div class="section" style="animation-delay: 0.8s;">
+            <!-- ========== SECTION 4: ANALISIS DE DATOS — EV2 + EV3 ========== -->
+            <div class="section" style="animation-delay: 0.45s;">
                 <div class="section-title">ANALISIS DE DATOS</div>
-                <div class="text-block">
-                    <strong>Dataset final:</strong> ~5,600 registros de transacciones de subasta, cada uno con 10 campos. Los datos fueron generados via webhook simulado durante la evaluacion.
+                <div class="text-block" style="border-left:3px solid var(--mw-green); padding-left:20px; margin-bottom:30px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.8rem; color:var(--mw-green); letter-spacing:4px; margin-bottom:10px;">EV2 &mdash; NYC TLC TAXI</div>
+                    <strong>Dataset:</strong> NYC Yellow Taxi Trip Data (Enero 2026) &mdash; millones de registros procesados via pipeline Batch.
                     <br><br>
-                    <strong>Hallazgos clave del dashboard:</strong>
+                    <strong>Hallazgos clave del dashboard en Power BI:</strong>
                     <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
-                        <li><strong>Distribucion por genero:</strong> 63.2% femenino, 36.8% masculino, reflejando la composicion demografica de los participantes en la subasta.</li>
-                        <li><strong>Volumen por empresa:</strong> Meta, Salesforce y Alphabet muestran la mayor frecuencia de transacciones, consistente con su presencia en el mercado de componentes tecnologicos.</li>
-                        <li><strong>Montos por producto:</strong> Los productos de mayor valor economico concentran las transacciones mas significativas, con una distribucion de cola larga tipica de mercados de subasta.</li>
-                        <li><strong>Forma de pago:</strong> La mayoria de las transacciones se concentran en un metodo de pago predominante, lo que sugiere estandarizacion en el proceso de compra.</li>
+                        <li><strong>Distribucion horaria:</strong> Identificacion de horas punta y valles de demanda segun volumen de viajes por hora del dia.</li>
+                        <li><strong>Zonas de alta demanda:</strong> Mapa de calor de ubicaciones de recogida y destino mas frecuentes (PULocationID, DOLocationID).</li>
+                        <li><strong>Analisis de tarifas:</strong> Promedio de fare_amount, tip_amount y total_amount por zona, tipo de pago y hora del dia.</li>
+                        <li><strong>KPI operativos:</strong> Distancia promedio por viaje, ingresos por dia, propinas por zona.</li>
                     </ul>
                     <br>
-                    <strong>Conclusiones:</strong> El pipeline de streaming demuestra la capacidad de capturar, procesar y visualizar datos en tiempo real con una latencia aceptable para aplicaciones de monitoreo operacional. La arquitectura serverless de GCP (Cloud Run + Pub/Sub + Dataflow) permite escalar automaticamente segun la carga de eventos, eliminando la necesidad de gestionar infraestructura. Las ventanas de 12 segundos en Dataflow ofrecen un balance entre granularidad de datos y volumen de archivos generados.
+                    <strong>Conclusiones Batch:</strong> El pipeline automatizado Cloud Scheduler + Pub/Sub + Cloud Run + Cloud Storage + Dataprep/Alteryx + BigQuery + Power BI demostro ser eficaz para procesamiento masivo. Dataprep fue vital para erradicar tarifas negativas y duplicados. BigQuery habilito auditoria SQL. Power BI transformo datos crudos en conocimiento estrategico para optimizar operaciones de transporte.
+                </div>
+                <div class="text-block" style="border-left:3px solid var(--mw-cyan); padding-left:20px;">
+                    <div style="font-family:'Bebas Neue'; font-size:1.8rem; color:var(--mw-cyan); letter-spacing:4px; margin-bottom:10px;">EV3 &mdash; SUBASTA DE COMPONENTES</div>
+                    <strong>Dataset final:</strong> ~5,600 registros de transacciones de subasta, cada uno con 10 campos. Datos generados via webhook simulado.
                     <br><br>
-                    <strong>Recomendaciones:</strong> Implementar Cloud Scheduler para pruebas automatizadas, configurar alertas de monitoreo en Cloud Monitoring, y evaluar BigQuery como destino final para habilitar consultas SQL sobre los datos en tiempo real. Para produccion, considerar retencion de mensajes extendida en Pub/Sub y particionamiento por fecha en Cloud Storage.
+                    <strong>Hallazgos clave del dashboard en Looker Studio:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Distribucion por genero:</strong> 63.2% femenino, 36.8% masculino, reflejando la composicion demografica de los participantes.</li>
+                        <li><strong>Volumen por empresa:</strong> Meta, Salesforce y Alphabet muestran la mayor frecuencia de transacciones.</li>
+                        <li><strong>Montos por producto:</strong> Productos de mayor valor economico concentran las transacciones mas significativas (distribucion de cola larga).</li>
+                        <li><strong>Forma de pago:</strong> Concentracion en un metodo predominante, sugiriendo estandarizacion.</li>
+                    </ul>
+                    <br>
+                    <strong>Conclusiones Streaming:</strong> El pipeline de streaming captura, procesa y visualiza datos en tiempo real con latencia aceptable para monitoreo operacional. La arquitectura serverless (Cloud Run + Pub/Sub + Dataflow) escala automaticamente. Ventanas de 12 segundos ofrecen balance entre granularidad y volumen de archivos.
+                    <br><br>
+                    <strong>Recomendaciones:</strong> Implementar Cloud Scheduler para pruebas automatizadas, alertas en Cloud Monitoring, BigQuery como destino final para consultas SQL. Para produccion, considerar retencion extendida en Pub/Sub y particionamiento por fecha en Cloud Storage.
                 </div>
             </div>
 
-            <div class="section" style="animation-delay: 1.0s;">
+            <!-- ========== SECTION 5: TECNOLOGIAS — EV2 + EV3 ========== -->
+            <div class="section" style="animation-delay: 0.6s;">
                 <div class="section-title">TECNOLOGIAS DEL PIPELINE</div>
-                <div class="text-block">
-                    El pipeline de datos se sostiene sobre un stack tecnologico que abarca desde la ingesta hasta la visualizacion:
-                    <br><br>
-                    <strong>Ingesta (Cloud Run + Python/Flask):</strong> Microservicio REST que recibe eventos via HTTP POST. Desplegado como contenedor serverless, escala a cero cuando no hay trafico. Codigo en Python con framework Flask, manejando errores de API de Google y reintentos.
-                    <br><br>
-                    <strong>Mensajeria (Pub/Sub):</strong> Bus de eventos asincrono con persistencia de 7 dias. Desacopla la produccion del consumo, permitiendo que el webhook y Dataflow operen independientemente. Garantiza entrega at-least-once.
-                    <br><br>
-                    <strong>Procesamiento (Dataflow + Apache Beam):</strong> Pipeline en Java con ventanas fijas de 12 segundos. Autoescalado hasta 10 workers. Lee de Pub/Sub via <code>PubsubIO</code> y escribe CSV particionados a Cloud Storage. El pipeline se monitorea desde la UI de Dataflow con metricas de throughput y lag.
-                    <br><br>
-                    <strong>Almacenamiento (Cloud Storage):</strong> Data Lake con carpetas estructuradas (temp/, staging/, samples/output/). Politica TTL de 30 dias para control de costos. Los CSV generados son la fuente de datos para las herramientas de visualizacion.
-                    <br><br>
-                    <strong>Preparacion (Alteryx / Dataprep):</strong> ETL visual para limpiar y estandarizar datos. Alteryx ofrece nodos de transformacion avanzada; Dataprep es la alternativa nativa GCP integrada directamente con Cloud Storage.
-                    <br><br>
-                    <strong>Visualizacion (Looker Studio):</strong> Dashboard interactivo con 8 graficos conectado a Cloud Storage. Actualizacion cada 15 minutos. Las metricas clave incluyen distribucion por genero, volumen por empresa y montos por producto.
-                    <br><br>
-                    <strong>Infraestructura (GCP Console + PowerShell):</strong> Gestion dual via interfaz web (GCP Console) y automatizacion por script (PowerShell/gcloud CLI). La consola web es ideal para configuracion inicial y monitoreo; los scripts garantizan despliegues repetibles y documentados.
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                    <div>
+                        <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-green); letter-spacing:3px; border-bottom:2px solid var(--mw-green); padding-bottom:10px; margin-bottom:20px;">EV2 &mdash; BATCH</div>
+                        <div class="endpoint-card">
+                            <div><span class="url" style="color:var(--mw-green);">Ingesta</span></div>
+                            <div class="desc">Cloud Scheduler (cada minuto) &rarr; Pub/Sub (TOPIC_taxi) &rarr; Cloud Run (yellow-trip-date-api) descarga y procesa Parquet desde repositorio oficial NYC TLC.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url" style="color:var(--mw-green);">Procesamiento</span></div>
+                            <div class="desc">Cloud Run + Python/Flask + pandas + pyarrow: procesa Parquet en lotes de 150,000 filas y transmite CSV a Cloud Storage via streaming para evitar OOM.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url" style="color:var(--mw-green);">Almacenamiento</span></div>
+                            <div class="desc">Cloud Storage (yellow-trip-eva2) como Data Lake. Dataprep/Alteryx para limpieza ETL. BigQuery (Dataprep.taxis_limpios) como Data Warehouse.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url" style="color:var(--mw-green);">Visualizacion</span></div>
+                            <div class="desc">Power BI Desktop conectado a BigQuery. Dashboards: distribucion horaria, mapa de calor, analisis de tarifas, KPI operativos.</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--mw-cyan); letter-spacing:3px; border-bottom:2px solid var(--mw-cyan); padding-bottom:10px; margin-bottom:20px;">EV3 &mdash; STREAMING</div>
+                        <div class="endpoint-card">
+                            <div><span class="url">Ingesta</span></div>
+                            <div class="desc">Cloud Run + Python/Flask: microservicio REST que recibe eventos via HTTP POST. Desplegado como contenedor serverless, escala a cero.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url">Mensajeria</span></div>
+                            <div class="desc">Pub/Sub con persistencia de 7 dias. Desacopla webhook de Dataflow, garantizando entrega at-least-once.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url">Procesamiento</span></div>
+                            <div class="desc">Dataflow + Apache Beam: pipeline autoescalado con ventanas fijas de 12 segundos. Lee de Pub/Sub via <code>PubsubIO</code>, escribe CSV particionados a Cloud Storage.</div>
+                        </div>
+                        <div class="endpoint-card">
+                            <div><span class="url">Visualizacion</span></div>
+                            <div class="desc">Looker Studio: dashboard interactivo con 8 graficos. Metricas: distribucion por genero, volumen por empresa, montos por producto.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-block" style="margin-top:30px; border-top:1px solid var(--mw-cyan-dim); padding-top:20px;">
+                    <strong>Infraestructura compartida:</strong> Gestion dual via GCP Console (configuracion inicial y monitoreo) + scripts PowerShell/gcloud CLI (despliegues repetibles). Stack comun: Cloud Run, Pub/Sub, Cloud Storage, Alteryx/Dataprep. Diferenciador: BigQuery + Power BI (EV2 Batch) vs Dataflow + Looker Studio (EV3 Streaming).
                 </div>
             </div>
 
