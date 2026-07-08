@@ -183,7 +183,11 @@
     <header>
         <a href="/index.html" style="background:none;border:1px solid var(--mw-cyan-dim);color:var(--mw-cyan);padding:8px 20px;font-family:'Share Tech Mono',monospace;font-size:0.9rem;letter-spacing:2px;text-decoration:none;transition:all 0.3s;margin-right:25px;cursor:pointer;" onmouseover="this.style.background='var(--mw-cyan)';this.style.color='#000';this.style.borderColor='var(--mw-cyan)';this.style.boxShadow='0 0 15px rgba(0,240,255,0.4)';" onmouseout="this.style.background='none';this.style.color='var(--mw-cyan)';this.style.borderColor='var(--mw-cyan-dim)';this.style.boxShadow='none';">◂ RETURN</a>
         <div class="header-title">EXAMEN TRANSVERSAL // ARCHIVE</div>
-        <div class="header-status">
+        <div class="header-status" style="display:flex;align-items:center;gap:20px;">
+            <select id="videoSelector" style="background:rgba(0,0,0,0.9);border:1px solid var(--mw-cyan-dim);color:var(--mw-cyan);font-family:'Share Tech Mono',monospace;font-size:0.85rem;padding:6px 12px;letter-spacing:1px;cursor:crosshair;outline:none;">
+                <option value="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/bideo.proceso.striming.mp4" selected>STREAMING (EV3)</option>
+                <option value="https://github.com/jofrestroms/examen-bigdata/releases/download/v1/video.proceso.bash.mp4">BASH (EV2)</option>
+            </select>
             <div class="status-dot"></div>
             LINK SECURE
         </div>
@@ -197,6 +201,8 @@
                     <strong>CLASSIFIED FOOTAGE</strong> // EXAMEN TRANSVERSAL — DAY 3, 0100 HRS
                     <br><br>
                     Use los controles para reproducir, pausar y navegar al punto exacto del metraje.
+                    <br>
+                    Seleccione el modo de operaci&oacute;n: <strong id="currentVideoLabel">STREAMING (EV3)</strong>
                 </div>
 
                 <div class="video-wrapper" id="videoWrapper">
@@ -420,6 +426,25 @@
 
         video.addEventListener('dblclick', () => {
             fullscreenBtn.click();
+        });
+
+        // VIDEO SELECTOR
+        const videoSelector = document.getElementById('videoSelector');
+        const currentVideoLabel = document.getElementById('currentVideoLabel');
+        videoSelector.addEventListener('change', () => {
+            const wasPaused = video.paused;
+            const currentTime = video.currentTime;
+            const source = video.querySelector('source');
+            source.src = videoSelector.value;
+            video.load();
+            if (!wasPaused) {
+                video.currentTime = currentTime;
+                video.play().catch(() => {});
+            }
+            currentVideoLabel.textContent = videoSelector.options[videoSelector.selectedIndex].text;
+            progressBuffer.style.width = '0%';
+            playBtn.textContent = '▶';
+            bigPlayOverlay.classList.remove('hidden');
         });
     </script>
 </body>

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXAMEN TRANSVERSAL // PROCESO BASH</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+        :root {
+            --sat-black: #02060a;
+            --panel-bg: rgba(12, 22, 38, 0.8);
+            --mw-white: #e2e8f0;
+            --mw-cyan: #00f0ff;
+            --mw-cyan-dim: rgba(0, 240, 255, 0.15);
+            --mw-gray: #829ab1;
+            --mw-red: #ff2a2a;
+            --mw-green: #39ff14;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair !important; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--sat-black); border-left: 1px solid var(--mw-cyan-dim); }
+        ::-webkit-scrollbar-thumb { background: var(--mw-cyan); }
+        body { position: relative;
+            background-color: var(--sat-black); color: var(--mw-gray); font-family: 'Share Tech Mono', monospace; overflow-x: hidden;
+            background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        .scanlines { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 3px); z-index: 9998; pointer-events: none; }
+        .vignette { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 50%, transparent 20%, rgba(0,0,0,0.95) 100%); z-index: 9997; pointer-events: none; }
+        .bg-watermark { position: fixed; top: 50%; left: 60%; transform: translate(-50%, -50%) rotate(0deg); width: 80vw; height: 80vw; border-radius: 50%; border: 1px dashed var(--mw-cyan-dim); z-index: 1; opacity: 0.15; pointer-events: none; animation: spinRotate 200s linear infinite; }
+        .bg-watermark::before { content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--mw-cyan); font-size: 5rem; }
+        @keyframes spinRotate { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        header {
+            position: fixed; top: 0; left: 0; width: 100%; height: 70px; background: rgba(0, 0, 0, 0.8); border-bottom: 2px solid var(--mw-cyan); display: flex; align-items: center; padding: 0 50px; z-index: 1000; backdrop-filter: blur(15px); box-shadow: 0 5px 30px rgba(0, 240, 255, 0.1);
+        }
+        .header-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--mw-white); letter-spacing: 8px; text-shadow: 0 0 15px rgba(0,240,255,0.5); }
+        .header-status { margin-left: auto; color: var(--mw-cyan); font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: bold; letter-spacing: 4px; display: flex; align-items: center; gap: 15px; }
+        .status-dot { width: 12px; height: 12px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .container { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; padding-top: 70px; position: relative; z-index: 10; }
+        nav { background: rgba(2, 6, 12, 0.85); border-right: 1px solid var(--mw-cyan-dim); padding: 40px 0; height: calc(100vh - 70px); position: sticky; top: 70px; backdrop-filter: blur(10px); }
+        .nav-title { padding: 0 30px; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--mw-gray); letter-spacing: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        nav ul { list-style: none; }
+        nav a {
+            display: flex; align-items: center; padding: 18px 30px; border-left: 3px solid transparent; cursor: pointer; transition: all 0.3s; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; letter-spacing: 3px; color: var(--mw-gray); text-decoration: none; position: relative; overflow: hidden;
+        }
+        nav a::before { content: ''; position: absolute; left: -100%; top: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent); transition: left 0.5s; }
+        nav a:hover::before { left: 100%; }
+        nav a:hover { color: var(--mw-white); background: rgba(0, 240, 255, 0.05); }
+        nav .active { border-left-color: var(--mw-cyan); color: var(--mw-cyan); background: rgba(0, 240, 255, 0.1); text-shadow: 0 0 10px rgba(0,240,255,0.5); font-weight: bold; }
+        nav .active::after { content: '\25C4'; position: absolute; right: 20px; color: var(--mw-cyan); animation: slideLeft 1s infinite; }
+        @keyframes slideLeft { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+        main { padding: 50px 80px; max-width: 1400px; position: relative; }
+        .section {
+            background: var(--panel-bg); border: 1px solid var(--mw-cyan-dim); padding: 50px; margin-bottom: 50px; position: relative; backdrop-filter: blur(10px); opacity: 0; will-change: transform; transform: translateY(30px); animation: fadeInUp 0.6s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        .section::before, .section::after { content: ''; position: absolute; width: 30px; height: 30px; border: 2px solid var(--mw-cyan); transition: all 0.3s; }
+        .section::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .section::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .section:hover::before, .section:hover::after { width: 40px; height: 40px; }
+        .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: var(--mw-white); letter-spacing: 6px; margin-bottom: 25px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 20px; text-shadow: 0 0 20px rgba(0,240,255,0.4); }
+        .section-title::before { content: ''; width: 10px; height: 40px; background: var(--mw-cyan); box-shadow: 0 0 15px var(--mw-cyan); }
+        .text-block { font-size: 1.1rem; line-height: 1.8; margin-bottom: 25px; color: #94a3b8; }
+        .text-block strong { color: var(--mw-white); background: rgba(0,240,255,0.15); padding: 2px 6px; border-radius: 3px; border-bottom: 1px solid var(--mw-cyan); }
+        .endpoint-card {
+            background: rgba(0,0,0,0.7); border: 1px solid var(--mw-cyan-dim); padding: 25px; margin-bottom: 20px; position: relative; transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .endpoint-card:hover { transform: translateX(10px); border-color: var(--mw-cyan); box-shadow: -5px 0 20px rgba(0,240,255,0.2); }
+        .endpoint-card::before { content: ''; position: absolute; top:0; left:0; width:4px; height:100%; background: var(--mw-cyan); }
+        .method { font-family: 'Rajdhani', sans-serif; font-weight: bold; padding: 5px 12px; border-radius: 2px; margin-right: 15px; font-size: 1.2rem; letter-spacing: 2px; }
+        .method.get { background: rgba(57, 255, 20, 0.1); color: var(--mw-green); border: 1px solid var(--mw-green); box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
+        .method.post { background: rgba(255, 170, 0, 0.1); color: #ffaa00; border: 1px solid #ffaa00; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); }
+        .url { font-family: 'Share Tech Mono', monospace; font-weight: bold; color: var(--mw-white); font-size: 1.2rem; }
+        .desc { margin-top: 15px; font-size: 1rem; color: var(--mw-gray); border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+        .code-box {
+            background: #010409; border: 1px solid #1e293b; border-left: 3px solid var(--mw-cyan); padding: 20px; font-family: 'Share Tech Mono', monospace; font-size: 1rem; color: #38bdf8; margin-top: 20px; white-space: pre-wrap; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .code-box::before { content: 'DECRYPTED PAYLOAD'; position: absolute; top: -12px; left: 15px; background: var(--sat-black); padding: 0 10px; font-size: 0.8rem; color: var(--mw-cyan); letter-spacing: 2px; border: 1px solid var(--mw-cyan-dim); }
+        .arch-diagram {
+            display: flex; flex-direction: column; gap: 40px; align-items: center; margin: 50px 0; padding: 50px; background: rgba(0, 240, 255, 0.02); border: 1px solid var(--mw-cyan-dim); position: relative;
+        }
+        .arch-diagram::before { content: 'PIPELINE SCHEMATIC'; position: absolute; top: 10px; left: 15px; font-family: 'Rajdhani'; color: var(--mw-gray); letter-spacing: 3px; font-size: 0.9rem; }
+        .node {
+            padding: 20px 40px; border: 2px solid var(--mw-cyan); color: var(--mw-white); font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 3px; background: rgba(0,0,0,0.9); text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.2); transition: all 0.3s; position: relative; cursor: crosshair;
+        }
+        .node:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 240, 255, 0.5); background: rgba(0, 240, 255, 0.1); }
+        .node.client { border-color: var(--mw-white); }
+        .node.db { border-color: var(--mw-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.2); }
+        .node-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--mw-cyan); display: block; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase; }
+        .arrow { width: 3px; height: 40px; background: var(--mw-cyan); position: relative; box-shadow: 0 0 10px var(--mw-cyan); }
+        .arrow::after { content: '\25BC'; position: absolute; bottom: -14px; left: -7px; color: var(--mw-cyan); font-size: 1rem; text-shadow: 0 0 10px var(--mw-cyan); }
+        .layer-box { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; width: 100%; border: 2px dashed rgba(0, 240, 255, 0.3); padding: 40px; position: relative; background: rgba(0,0,0,0.3); }
+        .layer-title { position: absolute; top: -15px; left: 30px; background: var(--sat-black); padding: 0 15px; color: var(--mw-cyan); font-weight: bold; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; letter-spacing: 3px; border: 1px solid var(--mw-cyan); }
+        .footer { text-align: center; color: var(--mw-gray); font-size: 0.9rem; margin-top: 100px; padding-bottom: 50px; letter-spacing: 6px; opacity: 0.5; }
+        .hud-crosshair-x { position: absolute; top: 0; left: 0; width: 100%; height: 1px; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-crosshair-y { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: rgba(0, 240, 255, 0.4); pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--mw-cyan); transition: opacity 0.2s; }
+        .hud-target { position: absolute; top: 0; left: 0; width: 40px; height: 40px; border: 1px solid rgba(0, 240, 255, 0.8); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: all 0.1s ease-out; box-shadow: inset 0 0 10px rgba(0,240,255,0.5); }
+        .hud-target::after { content:''; position:absolute; top:48%; left:48%; width:4px; height:4px; background:var(--mw-cyan); border-radius:50%; }
+        .scanner { position: fixed; top: -10%; left: 0; width: 100vw; height: 10vh; background: linear-gradient(to bottom, transparent, rgba(0,240,255,0.15), transparent); animation: scan 4s linear infinite; z-index: 9996; pointer-events: none; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+        #bootOverlay { position:fixed;top:0;left:0;width:100vw;height:100vh;background:#02060a;z-index:10000;display:flex;align-items:center;justify-content:center; flex-direction: column; gap: 20px; transition: opacity 0.5s ease; }
+        .glitch-text { font-family: 'Share Tech Mono', monospace; font-size: 2.5rem; color: var(--mw-cyan); letter-spacing: 15px; position: relative; animation: glitch 1s linear infinite; text-shadow: 0 0 20px var(--mw-cyan); text-align: center;}
+        @keyframes glitch { 2%, 64% { transform: translate(2px,0) skew(0deg); } 4%, 60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
+        @keyframes crtFlicker { 0% { opacity: 0.98; } 5% { opacity: 0.90; filter: contrast(1.2); } 10% { opacity: 0.98; filter: contrast(1); } 100% { opacity: 1; } }
+        body { position: relative; animation: crtFlicker 3s infinite; }
+    </style>
+</head>
+<body>
+    <div class='hud-crosshair-x' id='hx'></div>
+    <div class='hud-crosshair-y' id='hy'></div>
+    <div class='hud-target' id='ht'></div>
+    <div class='scanner'></div>
+    <div id='bootOverlay'><div class='glitch-text'>ESTABLISHING SECURE CONNECTION...</div></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="bg-watermark"></div>
+    <header>
+        <div class="header-title">EXAMEN TRANSVERSAL // PROCESO BASH</div>
+        <div class="header-status"><div class="status-dot"></div>LINK SECURE</div>
+    </header>
+    <div class="container">
+        <nav>
+            <div class="nav-title">DATABANKS</div>
+            <ul>
+                <a href="/proceso-bash.html" class="active">1. PROCESO BASH (EV2)</a>
+                <a href="/arquitectura.html">2. PROCESO STREAMING (EV3)</a>
+                <a href="/componentes.html">3. COMPONENTES</a>
+                <a href="/implementacion.html">4. IMPLEMENTACION</a>
+                <a href="/fundamentos.html">5. FUNDAMENTOS & DATOS</a>
+            </ul>
+        </nav>
+        <main>
+
+            <!-- SECTION 1: RESUME EJECUTIVO -->
+            <div class="section">
+                <div class="section-title">RESUMEN EJECUTIVO</div>
+                <div class="text-block">
+                    Este proyecto implementa una arquitectura <strong>Batch</strong> sobre Google Cloud Platform para el an&aacute;lisis masivo de datos hist&oacute;ricos de la <strong>NYC TLC (Taxi & Limousine Commission)</strong>. El pipeline automatizado ingesta archivos Parquet del repositorio oficial de NYC, los procesa por lotes en Cloud Run, los almacena en Cloud Storage como Data Lake, aplica limpieza ETL en Cloud Dataprep/Alteryx, los carga en BigQuery como Data Warehouse y finalmente los visualiza en <strong>Power BI</strong>.
+                    <br><br>
+                    <strong>Dataset:</strong> NYC Yellow Taxi Trip Data (Enero 2026) &mdash; 387.7 MB CSV, millones de registros<br>
+                    <strong>Stack:</strong> Cloud Scheduler &rarr; Pub/Sub &rarr; Cloud Run (Docker) &rarr; Cloud Storage &rarr; Dataprep/Alteryx &rarr; BigQuery &rarr; Power BI<br>
+                    <strong>Arquitectura:</strong> Batch (procesamiento por lotes programados)
+                </div>
+            </div>
+
+            <!-- SECTION 2: FUNDAMENTOS 5V -->
+            <div class="section" style="animation-delay: 0.15s;">
+                <div class="section-title">FUNDAMENTOS BIG DATA &mdash; 5V</div>
+                <div class="text-block">
+                    <strong>Volumen:</strong> El dataset base presenta un tama&ntilde;o considerable de 387.7 MB en formato CSV, equivalente a millones de registros de viajes individuales. Este volumen excede la capacidad de herramientas ofim&aacute;ticas tradicionales, justificando el uso de Cloud Storage y BigQuery.
+                    <br><br>
+                    <strong>Velocidad:</strong> Pipeline dise&ntilde;ado bajo un modelo de procesamiento por lotes (Batch). Cloud Scheduler orquesta la ingesta en intervalos programados, capturando y procesando el gran volumen de informaci&oacute;n de forma peri&oacute;dica.
+                    <br><br>
+                    <strong>Variedad:</strong> La informaci&oacute;n ingresa en formato Parquet y se materializa como CSV tabular, conteniendo tipos de datos heterog&eacute;neos: texto (identificadores de proveedor), variables temporales (fechas de inicio y fin del viaje) y num&eacute;ricas (distancias, tarifas, propinas, recargos).
+                    <br><br>
+                    <strong>Veracidad:</strong> Para asegurar la calidad de los datos crudos, el proceso ETL aplica reglas estrictas de limpieza que mitigan inconsistencias como valores nulos, tarifas negativas y registros con distancia cero, garantizando que el an&aacute;lisis final se base en informaci&oacute;n fidedigna.
+                    <br><br>
+                    <strong>Valor:</strong> Transformar los datos crudos en insights estrat&eacute;gicos conectados a Power BI permite extraer conocimiento accionable: horarios de mayor congesti&oacute;n, zonas de alta demanda y promedios de ingresos para la toma de decisiones del negocio.
+                </div>
+            </div>
+
+            <!-- SECTION 3: PIPELINE OVERVIEW -->
+            <div class="section" style="animation-delay: 0.3s;">
+                <div class="section-title">PIPELINE OVERVIEW</div>
+                <div class="arch-diagram">
+                    <div class="node" style="font-size:1.2rem;">NYC TLC PARQUET<span class="node-sub">yellow_tripdata_2026-01.parquet</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.2rem;">CLOUD RUN<span class="node-sub">yellow-trip-date-api :8080</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.2rem;">PUB/SUB<span class="node-sub">TOPIC_taxi</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.2rem;">CLOUD STORAGE<span class="node-sub">yellow-trip-eva2</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.2rem;">DATAPREP / ALTERYX<span class="node-sub">ETL & Limpieza</span></div>
+                    <div class="arrow"></div>
+                    <div class="node" style="font-size:1.2rem;border-color:var(--mw-green);">BIGQUERY<span class="node-sub">Dataprep.taxis_limpios</span></div>
+                    <div class="arrow" style="background:var(--mw-green);box-shadow:0 0 10px var(--mw-green);"></div>
+                    <div class="node" style="font-size:1.2rem;border-color:#facc15;">POWER BI<span class="node-sub">Dashboard</span></div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: PASO 0 - CONFIGURACION -->
+            <div class="section" style="animation-delay: 0.4s;">
+                <div class="section-title">PASO 0 &mdash; CONFIGURACION</div>
+                <div class="text-block">
+                    <strong>Variables de entorno del proyecto:</strong>
+                </div>
+                <div class="code-box">
+export PROJECT_ID="qwiklabs-gcp-01-b2793d63d05b"
+export BUCKET_NAME="yellow-trip-eva2"
+export TOPIC_ID="TOPIC_taxi"
+export REGION="us-east1"
+echo "PROJECT_ID=$PROJECT_ID"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "TOPIC_ID=$TOPIC_ID"
+                </div>
+                <div class="text-block">
+                    <strong>Pub/Sub:</strong> Se crea el t&oacute;pico <code>TOPIC_taxi</code> que act&uacute;a como bus de mensajer+a as&iacute;ncrona para las notificaciones de ingesta.
+                </div>
+                <div class="code-box">
+gcloud pubsub topics create $TOPIC_ID
+                </div>
+                <div class="text-block">
+                    <strong>Cloud Storage:</strong> Se crea el bucket <code>yellow-trip-eva2</code> que funciona como Data Lake para almacenar los CSV procesados.
+                </div>
+                <div class="code-box">
+gcloud storage buckets create gs://$BUCKET_NAME --project=$PROJECT_ID --location=$REGION
+                </div>
+            </div>
+
+            <!-- SECTION 5: PASO 1 - CLOUD RUN MICROSERVICE -->
+            <div class="section" style="animation-delay: 0.5s;">
+                <div class="section-title">PASO 1 &mdash; CLOUD RUN</div>
+                <div class="text-block">
+                    Se despliega un microservicio REST en Python/Flask que descarga el archivo Parquet del repositorio oficial de NYC TLC, lo procesa en lotes de 150,000 filas usando Apache Parquet y pandas, y transmite el resultado como CSV directamente a Cloud Storage v&iacute;a streaming para evitar problemas de memoria (OOM). Adicionalmente publica metadatos del proceso al t&oacute;pico Pub/Sub.
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(0,240,255,0.1);color:var(--mw-cyan);border-color:var(--mw-cyan);">FILE</span> <span class="url">main.py</span></div>
+                    <div class="desc">Microservicio Flask que procesa Parquet por lotes y escribe CSV a GCS en streaming.</div>
+                    <div class="code-box">
+import os, io, json, logging, requests
+import pandas as pd
+import pyarrow.parquet as pq
+from datetime import datetime
+from flask import Flask, jsonify
+from google.cloud import storage
+
+app = Flask(__name__)
+DATA_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-01.parquet"
+OUTPUT_PREFIX = "tlc/trips"
+
+def download_parquet():
+    response = requests.get(DATA_URL, timeout=300)
+    response.raise_for_status()
+    return response.content
+
+def process_and_upload_parquet(content, csv_filename):
+    blob = bucket.blob(csv_filename)
+    pf = pq.ParquetFile(io.BytesIO(content))
+    with blob.open("wt", encoding="utf-8") as f:
+        for i, batch in enumerate(pf.iter_batches(batch_size=150000)):
+            df_chunk = batch.to_pandas()
+            df_chunk.to_csv(f, index=False, header=(i == 0))
+
+@app.route("/", methods=["POST", "GET"])
+def main():
+    content = download_parquet()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_filename = f"{OUTPUT_PREFIX}/yellow_tripdata_{timestamp}.csv"
+    processed = process_and_upload_parquet(content, csv_filename)
+    publish_to_pubsub(metadata)
+    return jsonify({"status":"success","records_processed":processed["total_records"]})
+                    </div>
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(0,240,255,0.1);color:var(--mw-cyan);border-color:var(--mw-cyan);">FILE</span> <span class="url">Dockerfile</span></div>
+                    <div class="code-box">
+FROM python:3.9-slim
+WORKDIR /app
+COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8080
+CMD ["python", "main.py"]
+                    </div>
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(0,240,255,0.1);color:var(--mw-cyan);border-color:var(--mw-cyan);">FILE</span> <span class="url">requirements.txt</span></div>
+                    <div class="code-box">
+Flask==2.1.1
+requests==2.26.0
+google-cloud-storage==2.5.0
+google-cloud-pubsub==2.18.4
+Werkzeug==2.1.1
+pandas==2.1.0
+pyarrow==13.0.0
+numpy&lt;2.0.0
+                    </div>
+                </div>
+                <div class="text-block">
+                    <strong>Build, Tag, Pus y Deploy:</strong>
+                </div>
+                <div class="code-box">
+export SERVICE_NAME="yellow-trip-date-api"
+export IMAGE_NAME="yellow-trip-date-api"
+export IMAGE_TAG="v1"
+
+# Construit imagen
+docker build -t $IMAGE_NAME .
+
+# Etiquentar y subir
+docker tag $IMAGE_NAME gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+docker push gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+
+# Desplegar en Cloud Run
+gcloud run deploy $SERVICE_NAME \
+  --image gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG \
+  --platform managed \
+  --region=$REGION \
+  --allow-unauthenticated \
+  --set-env-vars PROJECT_ID=$PROJECT_ID,BUCKET_NAME=$BUCKET_NAME,TOPIC_ID=$TOPIC_ID \
+  --memory=2Gi \
+  --timeout=900
+
+# URL generada:
+# https://yellow-trip-date-api-15220088739.us-east1.run.app
+                </div>
+            </div>
+
+            <!-- SECTION 6: PASO 2 - CLOUD SCHEDULER -->
+            <div class="section" style="animation-delay: 0.6s;">
+                <div class="section-title">PASO 2 &mdash; CLOUD SCHEDULER</div>
+                <div class="text-block">
+                    Se configura un job de Cloud Scheduler que activa el microservicio cada minuto, simulando la ingesta peri&oacute;dica de datos para el pipeline Batch.
+                </div>
+                <div class="arch-diagram" style="flex-direction:row; justify-content:center; flex-wrap:wrap; gap:20px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+                        <div class="node" style="font-size:1rem; padding:15px 25px;">CLOUD SCHEDULER<span class="node-sub">* * * * *</span></div>
+                        <div class="node" style="font-size:0.9rem; padding:10px 20px; border-color:var(--mw-gray);">name: publisher-job<br>target: HTTP<br>method: GET</div>
+                    </div>
+                    <div class="arrow" style="transform:rotate(90deg);"></div>
+                    <div>
+                        <div class="node" style="font-size:1rem; padding:15px 25px;">URL TARGET<span class="node-sub">https://yellow-trip-date-api-...#.run.app</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 7: PASO 3 - ETL: LIMPIEZA, NORMALIZACION Y TRANSFORMACION -->
+            <div class="section" style="animation-delay: 0.7s;">
+                <div class="section-title">PASO 3 &mdash; ETL: LIMPIEZA Y TRANSFORMACION</div>
+                <div class="text-block">
+                    El n&uacute;cleo del &eacute;xito anal&iacute;tico reside en la preparaci&oacute;n de datos. El flujo ETL se estructura en tres ejes fundamentales, ejecutados en <strong>Cloud Dataprep</strong> y <strong>Alteryx Designer</strong>:
+                </div>
+
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(255,42,42,0.1);color:var(--mw-red);border-color:var(--mw-red);">ETL</span> <span class="url">1. LIMPIEZA DE DATOS</span></div>
+                    <div class="desc">
+                        <strong>Purga de transacciones inv&aacute;lidas:</strong> Eliminaci&oacute;n sistem&aacute;tica de registros con <code>trip_distance &le; 0</code> o <code>total_amount &le; 0</code>. Estos registros representan transacciones truncadas, viajes cancelados o fallas en la calibraci&oacute;n del tax&iacute;metro.
+                        <br><br>
+                        <strong>Aislamiento de anomal&iacute;as temporales:</strong> Filtro para descartar registros con fechas at&iacute;picas fuera del rango objetivo, originados por desconfiguraciones de hardware en los terminales de los veh&iacute;culos.
+                        <br><br>
+                        <strong>Deduplicaci&oacute;n:</strong> Validaci&oacute;n a nivel de fila para identificar y remover registros exactos duplicados, evitando la inflaci&oacute;n artificial de ingresos.
+                    </div>
+                </div>
+
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(255,170,0,0.1);color:#ffaa00;border-color:#ffaa00;">ETL</span> <span class="url">2. NORMALIZACION DE DATOS</span></div>
+                    <div class="desc">
+                        <strong>Tratamiento de valores nulos:</strong> Estandarizaci&oacute;n de celdas vac&iacute;as (NULL o NaN) en columnas cr&iacute;ticas como <code>payment_type</code> y <code>RatecodeID</code>. Previene el quiebre de funciones de agregaci&oacute;n (SUM, AVG) en consultas SQL masivas.
+                        <br><br>
+                        <strong>Casteo de tipos de datos (Typecasting):</strong> Forzado de la tipolog&iacute;a correcta: identificadores como enteros (INTEGER), m&eacute;tricas de recaudo como decimales (FLOAT), campos cronol&oacute;gicos como DATETIME.
+                    </div>
+                </div>
+
+                <div class="endpoint-card">
+                    <div><span class="method get" style="background:rgba(57,255,20,0.1);color:var(--mw-green);border-color:var(--mw-green);">ETL</span> <span class="url">3. TRANSFORMACION Y ENRIQU</span></div>
+                    <div class="desc">
+                        <strong>M&eacute;tricas derivadas temporales:</strong> A partir del campo <code>tpep_pickup_datetime</code> se extraen atributos espec&iacute;ficos: &quot;Hora del d&iacute;a&quot; y &quot;D&iacute;a de la semana&quot;. Esta transformaci&oacute;n alimenta los gr&aacute;ficos de distribuci&oacute;n temporal en el dashboard sin sobrecargar el motor de base de datos con c&aacute;lculos en tiempo de ejecuci&oacute;n.
+                        <br><br>
+                        <strong>Optimizaci&oacute;n del esquema:</strong> Descarte de columnas sin valor para los requerimientos del negocio. Esta reducci&oacute;n de dimensionalidad disminuye el peso del archivo procesado, optimizando la velocidad de transferencia y minimizando costos de almacenamiento.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 8: PASO 4 - BIGQUERY -->
+            <div class="section" style="animation-delay: 0.8s;">
+                <div class="section-title">PASO 4 &mdash; BIGQUERY</div>
+                <div class="text-block">
+                    Una vez limpios, los datos se cargan en <strong>BigQuery</strong> como la tabla <code>Dataprep.taxis_limpios</code>. Se ejecutan consultas SQL de exploraci&oacute;n y validaci&oacute;n para auditar la calidad de los datos:
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get">SQL</span> <span class="url">Validaci&oacute;n General</span></div>
+                    <div class="desc">Verifica que todas las columnas y registros aterrizaron correctamente en el Data Warehouse.</div>
+                    <div class="code-box">select * from `Dataprep.taxis_limpios`</div>
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get">SQL</span> <span class="url">Identificadores de Proveedor</span></div>
+                    <div class="desc">Audita que los datos categ&oacute;ricos (VendorID) se hayan cargado correctamente.</div>
+                    <div class="code-box">select VendorID from `Dataprep.taxis_limpios`</div>
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get">SQL</span> <span class="url">Auditor&iacute;a Financiera</span></div>
+                    <div class="desc">Revisa la distribuci&oacute;n de tarifas base. Existen registros con valores negativos (ej. -133.2, -67.8), anomal&iacute;a que demuestra la necesidad de filtros de limpieza.</div>
+                    <div class="code-box">select fare_amount from `Dataprep.taxis_limpios`</div>
+                </div>
+                <div class="endpoint-card">
+                    <div><span class="method get">SQL</span> <span class="url">Tarifa de Aeropuerto</span></div>
+                    <div class="desc">Detecta inconsistencias en los recargos por aeropuerto (Airport_fee), confirmando "datos sucios" en el archivo crudo.</div>
+                    <div class="code-box">select Airport_fee from `Dataprep.taxis_limpios`</div>
+                </div>
+            </div>
+
+            <!-- SECTION 9: PASO 5 - POWER BI -->
+            <div class="section" style="animation-delay: 0.9s;">
+                <div class="section-title">PASO 5 &mdash; POWER BI</div>
+                <div class="text-block">
+                    La herramienta de visualizaci&oacute;n final. Power BI Desktop se conecta a BigQuery para tomar la informaci&oacute;n ordenada y transformarla en gr&aacute;ficos interactivos e informes visuales que ayudan a la toma de decisiones.
+                    <br><br>
+                    Los dashboards incluyen:
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Distribuci&oacute;n horaria:</strong> Volumen de viajes por hora del d&iacute;a, identificando horas punta y valles de demanda.</li>
+                        <li><strong>Zonas de alta demanda:</strong> Mapa de calor de ubicaciones de recogida y destino m&aacute;s frecuentes.</li>
+                        <li><strong>An&aacute;lisis de tarifas:</strong> Promedio de tarifas por zona, tipo de pago y hora del d&iacute;a.</li>
+                        <li><strong>KPI operativos:</strong> Distancia promedio por viaje, ingresos por d&iacute;a, propinas por zona.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 10: ROLES Y GOBERNANZA -->
+            <div class="section" style="animation-delay: 1.0s;">
+                <div class="section-title">ROLES & GOBERNANZA DE DATOS</div>
+                <div class="text-block">
+                    <strong>Gobierno de Datos:</strong> La prioridad es la <strong>Gesti&oacute;n de Calidad del Dato</strong>. Se implementan reglas de validaci&oacute;n en Dataprep para limpiar inconsistencias, eliminar viajes con duraci&oacute;n cero e imputar valores nulos en tarifas cobradas.
+                    <br><br>
+                    <strong>Ciclo de Vida del Dato:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Captura:</strong> Descarga mensual estructurada desde el repositorio oficial de NYC TLC.</li>
+                        <li><strong>Almacenamiento:</strong> Guardado inicial en el Data Lake (Cloud Storage).</li>
+                        <li><strong>Transformaci&oacute;n:</strong> Limpieza y estandarizaci&oacute;n del formato de fechas, coordenadas y tarifas.</li>
+                        <li><strong>Archivado:</strong> Tras 5 a&ntilde;os, los datos hist&oacute;ricos pasan a Cold Storage para optimizar costos.</li>
+                    </ul>
+                    <br>
+                    <strong>Distribuci&oacute;n de Roles:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0;">
+                        <li><strong>Francisco Carasco - Custodio T&eacute;cnico:</strong> Administra la infraestructura, implementa accesos y asegura disponibilidad y seguridad de los flujos de datos.</li>
+                        <li><strong>Luis Castro - Data Steward:</strong> Vela por la calidad y el uso correcto de la informaci&oacute;n (limpieza de tarifas, validaci&oacute;n de datos) antes de que llegue a los paneles de control.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SECTION 11: CONCLUSION -->
+            <div class="section" style="animation-delay: 1.1s;">
+                <div class="section-title">CONCLUSION</div>
+                <div class="text-block">
+                    La implementaci&oacute;n de este pipeline Batch en Google Cloud Platform demostr&oacute; ser una soluci&oacute;n altamente eficaz para el procesamiento masivo de registros hist&oacute;ricos de transporte. A trav&eacute;s de la automatizaci&oacute;n orquestada con Cloud Scheduler, Pub/Sub y Cloud Run (en contenedores Docker), se logr&oacute; una ingesta robusta y escalable hacia el Data Lake en Cloud Storage.
+                    <br><br>
+                    El uso de <strong>Cloud Dataprep</strong> result&oacute; vital para la fase de limpieza, permitiendo erradicar inconsistencias cr&iacute;ticas del archivo original como tarifas negativas o registros duplicados que afectaban la veracidad de la informaci&oacute;n.
+                    <br><br>
+                    Al alojar datos normalizados en <strong>BigQuery</strong>, se facilit&oacute; la auditor&iacute;a anal&iacute;tica mediante consultas SQL y se prepar&oacute; el modelo para su conexi&oacute;n directa con <strong>Power BI</strong>, transformando un volumen masivo de datos crudos en conocimiento estrat&eacute;gico accionable para optimizar operaciones, comprender la demanda y maximizar la rentabilidad del negocio.
+                </div>
+            </div>
+
+            <div class="footer">
+                END OF BATCH INTEL // TASK FORCE 141 DEPLOYMENT
+            </div>
+        </main>
+    </div>
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playClickSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+        document.querySelectorAll('a').forEach(a => { a.addEventListener('click', () => playClickSound()); });
+        document.addEventListener('mousemove', (e) => {
+            document.getElementById('hx').style.top = e.pageY + 'px';
+            document.getElementById('hy').style.left = e.pageX + 'px';
+            document.getElementById('ht').style.top = e.pageY + 'px';
+            document.getElementById('ht').style.left = e.pageX + 'px';
+        });
+        document.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            const wh = window.innerHeight;
+            sections.forEach(s => {
+                const rect = s.getBoundingClientRect();
+                const center = rect.top + rect.height / 2;
+                const offset = (center - wh / 2) / wh;
+                s.style.transform = `translateY(${offset * -6}px)`;
+            });
+        });
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('bootOverlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('bootOverlay').style.display = 'none', 500);
+            }, 800);
+        };
+    </script>
+</body>
+</html>

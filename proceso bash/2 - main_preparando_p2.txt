@@ -1,0 +1,185 @@
+import os
+import io
+import json
+import logging
+import requests
+import pandas as pd
+import pyarrow.parquet as pq
+from datetime import datetime
+from flask import Flask, jsonify
+from google.cloud import storage
+
+try:
+    from google.cloud import pubsub_v1
+    PUBSUB_AVAILABLE = True
+except ImportError:
+    PUBSUB_AVAILABLE = False
+
+# =========================================================
+# CONFIGURACIÓN GENERAL
+# =========================================================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+
+project_id = os.environ.get("PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+bucket_name = os.environ.get("BUCKET_NAME")
+topic_id = os.environ.get("TOPIC_ID", "TOPIC_VZ")
+
+if not project_id or not bucket_name:
+    raise ValueError("Falta configurar PROJECT_ID o BUCKET_NAME")
+
+# URL directa al archivo de Taxis Amarillos
+DATA_URL = os.environ.get(
+    "DATA_URL",
+    "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-01.parquet"
+)
+
+OUTPUT_PREFIX = os.environ.get("OUTPUT_PREFIX", "tlc/trips")
+DATASET_NAME = "NYC TLC Yellow Taxi Trip Data"
+
+# =========================================================
+# CLIENTES GOOGLE CLOUD
+# =========================================================
+try:
+    storage_client = storage.Client(project=project_id)
+    bucket = storage_client.bucket(bucket_name)
+    gcs_enabled = True
+    logger.info(f"Cloud Storage conectado. Bucket: {bucket_name}")
+except Exception as e:
+    storage_client, bucket, gcs_enabled = None, None, False
+    logger.error(f"Error GCS: {e}")
+
+if PUBSUB_AVAILABLE:
+    try:
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(project_id, topic_id)
+        pubsub_enabled = True
+        logger.info(f"Pub/Sub conectado. Topic: {topic_path}")
+    except Exception as e:
+        publisher, topic_path, pubsub_enabled = None, None, False
+        logger.error(f"Error Pub/Sub: {e}")
+else:
+    publisher, topic_path, pubsub_enabled = None, None, False
+
+# =========================================================
+# FUNCIONES DE PROCESAMIENTO PARQUET EN LOTES
+# =========================================================
+def download_parquet():
+    """Descarga el archivo Parquet."""
+    try:
+        logger.info(f"Descargando datos desde: {DATA_URL}")
+        # Aumentamos el timeout a 5 minutos por si la red de Qwiklabs es lenta
+        response = requests.get(DATA_URL, timeout=300)
+        response.raise_for_status()
+        content = response.content
+        if not content: raise ValueError("El archivo descargado está vacío")
+        logger.info(f"Descarga exitosa. Tamaño: {len(content) / (1024*1024):.2f} MB")
+        return content
+    except Exception as e:
+        logger.error(f"Error en descarga: {e}")
+        raise
+
+def process_and_upload_parquet(content, csv_filename):
+    """Procesa todo el parquet en bloques y lo transmite a GCS para evitar OOM."""
+    if not gcs_enabled:
+        raise RuntimeError("Cloud Storage no está habilitado")
+
+    blob = bucket.blob(csv_filename)
+    logger.info("Iniciando procesamiento por lotes (chunking)...")
+    
+    pf = pq.ParquetFile(io.BytesIO(content))
+    total_records = pf.metadata.num_rows
+    fields = pf.schema.names
+    
+    logger.info(f"Total de registros a procesar: {total_records}")
+
+    # Abre un stream directo a Cloud Storage
+    with blob.open("wt", encoding="utf-8") as f:
+        # Iteramos en bloques de 150,000 filas para mantener la RAM estable
+        for i, batch in enumerate(pf.iter_batches(batch_size=150000)):
+            df_chunk = batch.to_pandas()
+            # Escribe los encabezados solo en el primer bloque
+            df_chunk.to_csv(f, index=False, header=(i == 0))
+            if i % 5 == 0:
+                logger.info(f"Procesando bloque {i} (Aprox {i * 150000} filas)...")
+
+    gcs_csv_path = f"gs://{bucket_name}/{csv_filename}"
+    logger.info(f"Archivo subido exitosamente a {gcs_csv_path}")
+    
+    return {
+        "gcs_csv_path": gcs_csv_path,
+        "total_records": total_records,
+        "total_fields": len(fields),
+        "fields": fields
+    }
+
+def save_metadata_to_gcs(data, filename):
+    if not gcs_enabled: return None
+    try:
+        blob = bucket.blob(filename)
+        blob.upload_from_string(data, content_type="application/json; charset=utf-8")
+        return f"gs://{bucket_name}/{filename}"
+    except Exception as e:
+        logger.error(f"Error subiendo metadata: {e}")
+        return None
+
+def publish_to_pubsub(message):
+    if not pubsub_enabled: return None
+    try:
+        message_json = json.dumps(message, ensure_ascii=False).encode("utf-8")
+        future = publisher.publish(topic_path, message_json)
+        return future.result(timeout=30)
+    except Exception as e:
+        logger.error(f"Error en Pub/Sub: {e}")
+        return None
+
+# =========================================================
+# ENDPOINT PRINCIPAL
+# =========================================================
+@app.route("/", methods=["POST", "GET"])
+def main():
+    try:
+        logger.info("Iniciando ingesta completa de archivo Parquet (Taxis Amarillos)...")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 1. Descargar
+        content = download_parquet()
+        
+        # 2. Procesar y Subir CSV en bloques (Todo el archivo)
+        csv_filename = f"{OUTPUT_PREFIX}/yellow_tripdata_{timestamp}.csv"
+        processed = process_and_upload_parquet(content, csv_filename)
+        
+        # 3. Guardar Metadata
+        metadata = {
+            "dataset": DATASET_NAME,
+            "source_url": DATA_URL,
+            "timestamp": timestamp,
+            "total_records": processed["total_records"],
+            "fields": processed["fields"],
+            "gcs_csv_path": processed["gcs_csv_path"],
+            "event": "tlc_yellow_taxi_processed"
+        }
+        meta_filename = f"{OUTPUT_PREFIX}/tlc_metadata_{timestamp}.json"
+        gcs_meta_path = save_metadata_to_gcs(json.dumps(metadata, indent=2), meta_filename)
+        
+        # 4. Pub/Sub
+        pubsub_id = publish_to_pubsub(metadata)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Archivo completo procesado en lotes y guardado en Storage",
+            "gcs_csv_path": processed["gcs_csv_path"],
+            "gcs_meta_path": gcs_meta_path,
+            "pubsub_message_id": pubsub_id,
+            "records_processed": processed["total_records"]
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error crítico: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)

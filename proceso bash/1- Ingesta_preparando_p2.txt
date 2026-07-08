@@ -1,0 +1,213 @@
+https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+DESCARGAR
+https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2026-01.parquet
+ 
+
+************************************************
+* Paso 0. Configuración  PUB/SUB
+***********************************************
+-. Create Topic
+	TOPIC_ID="TOPIC_taxi"
+
+************************************************
+* Paso 0. Configuración  Cloud Storage
+***********************************************
+-. Create Storage yellow-trip-eva2
+
+
+************************************************
+* Paso 1. Configuración  Cloud Run
+***********************************************
+--- Para usar Cloud Run, necesitas empaquetar tu aplicación en un contenedor Docker.
+
+-. Crear directorio
+mkdir -p ~/myapp
+
+-. Ir a directorio
+cd ~/myapp
+
+export PROJECT_ID="qwiklabs-gcp-01-b2793d63d05b"
+export BUCKET_NAME="yellow-trip-eva2"
+export TOPIC_ID="TOPIC_taxi"
+
+echo "PROJECT_ID=$PROJECT_ID"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "TOPIC_ID=$TOPIC_ID"
+
+
+
+******************************************************************
+*1.1-. Crear un archivo llamado main.py (nano main.py)
+******************************************************************
+
+
+---------------------------------------------------------------------------------
+Guarda y cierra con Ctrl + O, luego Enter, y luego Ctrl + X.
+---------------------------------------------------------------------------------
+
+******************************************************************
+*1.2-. Crear un archivo llamado Dockerfile (nano  Dockerfile)
+******************************************************************
+# Usa una imagen oficial de Python
+FROM python:3.9-slim
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Copia los archivos locales al contenedor
+COPY . /app
+
+# Instala las dependencias
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expone el puerto 8080 para la app
+EXPOSE 8080
+
+# Define el comando para ejecutar la aplicación
+CMD ["python", "main.py"]
+
+****************************************************************************************
+*1.3-. Crear un archivo llamado requirements.txt  (nano  requirements.txt)
+****************************************************************************************
+Flask==2.1.1
+requests==2.26.0
+google-cloud-storage==2.5.0
+google-cloud-pubsub==2.18.4
+Werkzeug==2.1.1
+pandas==2.1.0
+pyarrow==13.0.0
+numpy<2.0.0
+
+****************************************************************************************
+*1.4-. Construir y Ejecutar el Contenedor Localmente
+****************************************************************************************
+
+# Variables
+
+export SERVICE_NAME="yellow-trip-date-api"
+export IMAGE_NAME="yellow-trip-date-api"
+export IMAGE_TAG="v1"
+
+echo "PROJECT_ID=$PROJECT_ID"
+echo "BUCKET_NAME=$BUCKET_NAME"
+echo "TOPIC_ID=$TOPIC_ID"
+
+
+# Construir imagen
+docker build -t $IMAGE_NAME .
+
+****************************************************************************************
+*1.5-. Ejecutar la imagen
+****************************************************************************************
+
+docker run \
+-p 8080:8080 \
+-e PROJECT_ID=$PROJECT_ID \
+-e GOOGLE_CLOUD_PROJECT=$PROJECT_ID \
+-e BUCKET_NAME=$BUCKET_NAME \
+-e TOPIC_ID=$TOPIC_ID \
+$IMAGE_NAME
+
+
+****************************************************************************************
+* revisar:	web preview
+****************************************************************************************
+Press CTRL+C to quit
+
+
+****************************************************************************************
+*1.6-.  Etiquetar
+****************************************************************************************
+
+docker tag $IMAGE_NAME gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+
+****************************************************************************************
+*1.7-.  Subir a Container Registry
+****************************************************************************************
+
+docker push gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
+
+
+****************************************************************************************
+*----   Definir Region
+****************************************************************************************
+
+gcloud org-policies describe constraints/gcp.resourceLocations \
+--project=$PROJECT_ID
+
+
+ver:  
+      - in:us-west1-locations
+
+****************************************************************************************
+*1.8-.   Desplegar en Cloud Run
+****************************************************************************************
+	
+REGION="us-east1"
+*-------------------    Posibles --------------
+*	us-central
+*	us-central1
+*	europe-west1
+*	europe-west4
+*	us-east1
+*	us-east4
+*------------------------------------------------
+
+gcloud run deploy $SERVICE_NAME \
+  --image gcr.io/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG \
+  --platform managed \
+  --region=$REGION \
+  --allow-unauthenticated \
+  --set-env-vars PROJECT_ID=$PROJECT_ID,BUCKET_NAME=$BUCKET_NAME,TOPIC_ID=$TOPIC_ID \
+  --memory=2Gi \
+  --timeout=900
+
+Esta es la   URL: https://yellow-trip-date-api-15220088739.us-east1.run.app
+
+ojo: region [europe-west1]
+
+
+*********************************************************************************************************************************************
+*1.9-. Create a Cloud Schedule	
+*Create a Cloud Scheduler job in this project. The job publishes a message to a Pub/Sub topic at one-minute intervals:
+* modificar URL
+***********************************************************************************************************************************************
+
+name: 		publisher-job 
+Frequency: 	* * * * * 
+TimeZone                 united state/Chicago
+Target Type 	HTTP	
+URL		https://yellow-trip-date-api-15220088739.us-east1.run.app
+Method		GET
+
+Forze run
+
+
+Verificar --> Subscriptions -->  Subscriptions ID -->Messages --> Pull
+
+
+Alteryx
+IFMISMATCHED($col, ['Url'], 'Sin URL')
+
+delete --> Block_id
+
+Template --> datos_limpios
+
+
+
+
+
+ 
+
+TRUCOS En Caso de Fallas
+======================================
+# Detener contenedores previos si existen
+docker stop $(docker ps -q) 2>/dev/null || true
+
+# Eliminar imagen anterior
+docker rmi red-bus-api 2>/dev/null || true
+
+# Reconstruir imagen
+docker build -t red-bus-api .
+
+ 
